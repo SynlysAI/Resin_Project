@@ -1,0 +1,39 @@
+# 加入17mL 甲基丙酸
+S REACTOR_SOLUTION_ADD(0,17,reactor2);
+
+# 加入10ml 二氧六环
+S REACTOR_SOLUTION_ADD(1, 10,reactor2);
+
+# 加入20ml AIBME/乙晴
+S REACTOR_SOLUTION_ADD(2, 20,reactor2);
+
+# 加入4.5ml 氨水
+S REACTOR_SOLUTION_ADD(3, 4.5,reactor2);
+
+# 加入23ml稀盐酸
+S REACTOR_SOLUTION_ADD(4, 23,reactor2);
+
+# 启动反应器2氮气
+S REACTOR_N2_ON（1）
+
+# 启动反应器4氮气
+S REACTOR_N2_ON（3）
+
+# 设置温度
+S TEMP_SET(1,21)
+S TEMP_SET(2,22)
+S TEMP_SET(3,23)
+S TEMP_SET(4,24)
+
+# 启动搅拌
+S START_STIR(2,500)
+S START_STIR(4,500)
+
+# 等待30s
+S WAIT(30)
+
+# 停止搅拌
+S STOP_STIR(2)
+S STOP_STIR(4)
+
+
