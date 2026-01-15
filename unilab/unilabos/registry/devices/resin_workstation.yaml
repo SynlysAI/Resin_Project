@@ -1,0 +1,499 @@
+resinworkstation_device:
+  class:
+    action_value_mappings:
+      auto-connect_device:
+        feedback: {}
+        goal: {}
+        goal_default:
+          address: null
+          port: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                address:
+                  type: string
+                port:
+                  type: integer
+              required: []
+              type: object
+            result: {}
+          required:
+          - goal
+          title: connect_device参数
+          type: object
+        type: UniLabJsonCommand
+      auto-disconnect_device:
+        feedback: {}
+        goal: {}
+        goal_default: {}
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties: {}
+              required: []
+              type: object
+            result: {}
+          required:
+          - goal
+          title: disconnect_device参数
+          type: object
+        type: UniLabJsonCommand
+      auto-post_init:
+        feedback: {}
+        goal: {}
+        goal_default:
+          ros_node: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                ros_node:
+                  type: object
+              required:
+              - ros_node
+              type: object
+            result: {}
+          required:
+          - goal
+          title: post_init参数
+          type: object
+        type: UniLabJsonCommand
+      auto-post_process_clean:
+        feedback: {}
+        goal: {}
+        goal_default:
+          post_process_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                post_process_id:
+                  type: integer
+              required:
+              - post_process_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: post_process_clean参数
+          type: object
+        type: UniLabJsonCommand
+      auto-post_process_discharge_off:
+        feedback: {}
+        goal: {}
+        goal_default:
+          post_process_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                post_process_id:
+                  type: integer
+              required:
+              - post_process_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: post_process_discharge_off参数
+          type: object
+        type: UniLabJsonCommand
+      auto-post_process_discharge_on:
+        feedback: {}
+        goal: {}
+        goal_default:
+          post_process_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                post_process_id:
+                  type: integer
+              required:
+              - post_process_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: post_process_discharge_on参数
+          type: object
+        type: UniLabJsonCommand
+      auto-post_process_solution_add:
+        feedback: {}
+        goal: {}
+        goal_default:
+          end_bottle: null
+          inject_speed: null
+          start_bottle: null
+          suck_speed: 4.0
+          volume: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                end_bottle:
+                  type: string
+                inject_speed:
+                  type: number
+                start_bottle:
+                  type: string
+                suck_speed:
+                  default: 4.0
+                  type: number
+                volume:
+                  type: number
+              required:
+              - start_bottle
+              - end_bottle
+              - volume
+              - inject_speed
+              type: object
+            result: {}
+          required:
+          - goal
+          title: post_process_solution_add参数
+          type: object
+        type: UniLabJsonCommand
+      auto-reactor_air_off:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+              required:
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: reactor_air_off参数
+          type: object
+        type: UniLabJsonCommand
+      auto-reactor_air_on:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+              required:
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: reactor_air_on参数
+          type: object
+        type: UniLabJsonCommand
+      auto-reactor_n2_off:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+              required:
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: reactor_n2_off参数
+          type: object
+        type: UniLabJsonCommand
+      auto-reactor_n2_on:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+              required:
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: reactor_n2_on参数
+          type: object
+        type: UniLabJsonCommand
+      auto-reactor_solution_add:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+          solution_id: null
+          volume: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+                solution_id:
+                  type: integer
+                volume:
+                  type: number
+              required:
+              - solution_id
+              - volume
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: reactor_solution_add参数
+          type: object
+        type: UniLabJsonCommand
+      auto-start_reactor_stirrer:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+          speed: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+                speed:
+                  type: number
+              required:
+              - reactor_id
+              - speed
+              type: object
+            result: {}
+          required:
+          - goal
+          title: start_reactor_stirrer参数
+          type: object
+        type: UniLabJsonCommand
+      auto-stop_reactor_stirrer:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+              required:
+              - reactor_id
+              type: object
+            result: {}
+          required:
+          - goal
+          title: stop_reactor_stirrer参数
+          type: object
+        type: UniLabJsonCommand
+      auto-temp_set:
+        feedback: {}
+        goal: {}
+        goal_default:
+          reactor_id: null
+          temperature: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                reactor_id:
+                  type: integer
+                temperature:
+                  type: number
+              required:
+              - reactor_id
+              - temperature
+              type: object
+            result: {}
+          required:
+          - goal
+          title: temp_set参数
+          type: object
+        type: UniLabJsonCommand
+      auto-toggle_local_remote_control:
+        feedback: {}
+        goal: {}
+        goal_default:
+          mode: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                mode:
+                  type: string
+              required:
+              - mode
+              type: object
+            result: {}
+          required:
+          - goal
+          title: toggle_local_remote_control参数
+          type: object
+        type: UniLabJsonCommand
+      auto-update_state:
+        feedback: {}
+        goal: {}
+        goal_default:
+          state_data: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                state_data:
+                  type: object
+              required:
+              - state_data
+              type: object
+            result: {}
+          required:
+          - goal
+          title: update_state参数
+          type: object
+        type: UniLabJsonCommand
+      auto-wait:
+        feedback: {}
+        goal: {}
+        goal_default:
+          seconds: null
+        handles: []
+        result: {}
+        schema:
+          description: ''
+          properties:
+            feedback: {}
+            goal:
+              properties:
+                seconds:
+                  type: integer
+              required:
+              - seconds
+              type: object
+            result: {}
+          required:
+          - goal
+          title: wait参数
+          type: object
+        type: UniLabJsonCommand
+    module: resin_workstation:ResinWorkstation
+    status_types:
+      device_status: dict
+    type: python
+  description: ''
+  handles: []
+  icon: ''
+  init_param_schema:
+    config:
+      properties:
+        address:
+          default: 127.0.0.1
+          type: string
+        config:
+          type: object
+        debug_mode:
+          default: false
+          type: boolean
+        deck:
+          type: string
+        port:
+          default: 8888
+          type: integer
+      required: []
+      type: object
+    data:
+      properties:
+        device_status:
+          type: object
+      required:
+      - device_status
+      type: object
+  registry_type: device
+  version: 1.0.0
