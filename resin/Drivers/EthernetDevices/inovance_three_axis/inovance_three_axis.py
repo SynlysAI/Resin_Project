@@ -3,7 +3,6 @@ from platform import node
 import re
 #from pymodbus.client import ModbusTcpClient
 from Drivers.EthernetDevices.inovance_three_axis.tools.modbus import WorderOrder, Coil, DiscreteInputs, HoldRegister, InputRegister, DataType
-from pymodbus.constants import Endian
 import time
 import threading
 import csv
