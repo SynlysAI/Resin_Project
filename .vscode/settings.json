@@ -1,0 +1,33 @@
+{
+    // 全局禁用拼写和语法检查
+    "editor.spelling.check": false,
+    "editor.spelling.enabled": false,
+    "editor.grammar.enabled": false,
+    "editor.spelling.ignoreLanguage": ["markdown", "plaintext", "json"],
+    "editor.spelling.dictionaries": [],
+    
+    // 针对markdown文件的特定设置
+    "[markdown]": {
+        "editor.spelling.check": false,
+        "editor.spelling.enabled": false,
+        "editor.grammar.enabled": false,
+        "editor.quickSuggestions": {
+            "other": false,
+            "comments": false,
+            "strings": false
+        },
+        "editor.suggestOnTriggerCharacters": false,
+        "editor.wordBasedSuggestions": "off"
+    },
+    
+    // 禁用可能的markdown扩展检查
+    "markdownlint.enabled": false,
+    "vale.enabled": false,
+    "cSpell.enabled": false,
+    "cSpell.language": "en",
+    "cSpell.enabledLanguageIds": [],
+    "cSpell.ignorePaths": ["**/*.md"],
+    
+    // 禁用其他可能的检查
+    "redhat.telemetry.enabled": false
+}
