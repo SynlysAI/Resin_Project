@@ -315,6 +315,7 @@ def FixPump_Inject(deviceManager:DeviceManager,solution_number:int,volume:float)
     :param solution_name: 溶液名称
     :param volume: 转移体积，单位毫升
     """
+    self.param_storage.is_system_busy = True
     #基础固定参数
     input_speed=100 #rpm
     volume_per_round = 0.1#每转注射量，单位ml
@@ -328,14 +329,14 @@ def FixPump_Inject(deviceManager:DeviceManager,solution_number:int,volume:float)
     input_valve= deviceManager.fixpump_input_valves[solution_number-1]
 
     fixpump.reset()
-
+    time.sleep(2)
     fixpump.set_speed_rpm(input_speed)
     print(f'给定量泵设置注射速度({input_speed} rpm)')
     time.sleep(1)
     #打开三通阀，预备推入液体
     input_valve.open()
     print('定量泵进液阀打开')
-    time.sleep(1)
+    time.sleep(10)
     print("开始执行溶液注射……")
     fixpump.set_injection_volume(volume,volume_per_round)
     time.sleep(2)
@@ -349,8 +350,10 @@ def FixPump_Inject(deviceManager:DeviceManager,solution_number:int,volume:float)
     fixpump.set_injection_turns(gas_push_round)
     time.sleep(1)
     fixpump.reset()
+    time.sleep(2)
     print("通气完成，关闭通气阀门")
     gas_valve.close()
+    self.param_storage.is_system_busy = False
 
 def FixPump_reset(deviceManager:DeviceManager,solution_number:int):
     """
@@ -439,6 +442,14 @@ def Add_Solution_to_Reactor(deviceManager:DeviceManager,solution_number:int,volu
         reactor_position = AxisPosition.Reactor_3
     elif reactor == 4:
         reactor_position = AxisPosition.Reactor_4
+    elif reactor == 5:
+        reactor_position = AxisPosition.Reactor_5
+    elif reactor == 6:
+        reactor_position = AxisPosition.Reactor_6
+    elif reactor == 7:
+        reactor_position = AxisPosition.Reactor_7
+    elif reactor == 8:
+        reactor_position = AxisPosition.Reactor_8
     else:
         print("反应瓶编号错误")
 

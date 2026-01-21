@@ -4,6 +4,7 @@
 import sys
 import os
 import tempfile
+import json
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem
 
 
@@ -20,6 +21,10 @@ from BusinessActions.SingleStepActions.TemperatureControlAction import *
 from BusinessActions.SingleStepActions.ValveAction import *
 from BusinessActions.DeviceManager import DeviceManager
 from UIInteraction.ParameterManagement.ParameterStorage import ParameterStorage
+
+
+
+
 # ------------------------------
 # 第二步：核心配置（命令名→函数映射）
 # ------------------------------
@@ -90,6 +95,59 @@ def generate_execution_sequence(file_path):
         print(f"❌ 读取文件失败：{e}")
     
     return execution_sequence
+
+def generate_execution_sequence_from_content(content):
+    """
+    根据传入的文本内容生成 (函数对象, 参数列表) 的可执行序列
+    
+    :param content: 工艺文件的文本内容
+    :return: 执行序列，格式为 [(函数对象, 参数列表), ...]
+    """
+    execution_sequence = []
+    
+    try:
+        # 将文本内容按行分割
+        lines = content.splitlines()
+        
+        for line_num, line in enumerate(lines, 1):
+            stripped_line = line.strip()
+            
+            # 过滤注释行（#开头）和空行
+            if not stripped_line or stripped_line.startswith('#'):
+                continue
+            
+            # 只处理S开头的有效命令
+            if stripped_line.startswith('S '):
+                try:
+                    # 提取命令名（S 后面 → ( 前面）
+                    bracket_left = stripped_line.find('(')
+                    bracket_right = stripped_line.find(')')
+                    if bracket_left == -1 or bracket_right == -1:
+                        raise ValueError("缺少 '(' 或 ')'")
+                    
+                    command_name = stripped_line[len('S '):bracket_left].strip()
+                    if not command_name:
+                        raise ValueError("命令名为空")
+                    
+                    # 提取参数（( 里面 → ) 前面，按逗号分割）
+                    param_str = stripped_line[bracket_left+1:bracket_right].strip()
+                    parameters = [p.strip() for p in param_str.split(',')] if param_str else []
+                    
+                    # 检查命令是否有对应函数
+                    if command_name not in command_to_func:
+                        raise ValueError(f"无对应执行函数")
+                    
+                    # 加入执行序列（函数对象 + 参数列表）
+                    execution_sequence.append( (command_to_func[command_name], parameters) )
+                    
+                except Exception as e:
+                    print(f"⚠️  第{line_num}行命令无效，跳过：{e} | 原始内容：{stripped_line}")
+    
+    except Exception as e:
+        print(f"❌ 处理文本内容失败：{e}")
+    
+    return execution_sequence
+
 
 # ------------------------------
 # 第四步：根据函数名称处理参数
@@ -400,6 +458,187 @@ def Import_Process_UDP(table_widget):
     # 移除临时文件
     os.remove(temp_file_path)
 
+    
+def Import_Parament_UDP(message,device_manager:DeviceManager,send_response_func=None):
+    """
+    处理接收到的UDP消息，使用generate_execution_sequence_from_content函数解析，并打印执行序列
+    
+    :param message: 接收到的UDP消息字符串
+    :param device_manager: 设备管理器实例
+    :param send_response_func: UDP响应发送函数（可以是预先设定了参数的闭包函数）
+    """
+    print(f"接收到的原始UDP消息: {message}")
+    
+    # 获取参数管理器实例
+    parameter_storage = device_manager.parameter_storage
+    
+    # 使用正则表达式解析带参数的消息格式
+    import re
+    cmd_pattern = re.compile(r'^\S+\s+([A-Z_]+)\(([^)]+)\)$')
+    match = cmd_pattern.match(message)
+    
+    if match:
+        # 提取命令和参数
+        cmd = match.group(1)
+        param = match.group(2).strip()
+        print(f"解析到命令: {cmd}, 参数: {param}")
+    else:
+        # 没有参数的简单命令
+        cmd = message.strip()
+        param = None
+        print(f"解析到命令: {cmd}, 无参数")
+    
+    # 检查是否为GET_REACTOR_STATE消息（支持带参数和不带参数）
+    if cmd == "GET_REACTOR_STATE":
+        print("处理GET_REACTOR_STATE请求")
+        
+        reactor_state = {"status": "success"}
+        
+        if param:
+            # 提取反应器编号，如"reactor_1" -> 1
+            try:
+                reactor_num = int(param.split('_')[-1]) - 1  # 转换为0-based索引
+                if 0 <= reactor_num < len(parameter_storage.reactors):
+                    reactor = parameter_storage.reactors[reactor_num]
+                    # 只返回unilab查询的状态量
+                    reactor_state["reactor"] = {
+                        "reactor_id": reactor.reactor_id,
+                        "current_temperature": reactor.current_temperature,
+                        "target_temperature": reactor.arget_temperature,
+                        "stirring_status": reactor.stirring_status,
+                        "stirring_speed": reactor.stirring_speed,
+                        "n2_status": reactor.n2_status,
+                        "air_status": reactor.air_status,
+                        "status": reactor.status,
+                        "error_message": reactor.error_message
+                    }
+                    print(f"要发送的指定反应器({reactor_num + 1})状态响应: {reactor_state}")
+                else:
+                    reactor_state["status"] = "error"
+                    reactor_state["message"] = f"无效的反应器编号: {reactor_num + 1}"
+                    print(f"无效的反应器编号: {reactor_num + 1}")
+            except (ValueError, IndexError) as e:
+                reactor_state["status"] = "error"
+                reactor_state["message"] = f"参数解析错误: {e}"
+                print(f"参数解析错误: {e}")
+        else:
+            # 如果没有参数，只返回当前选中反应器的信息（unilab查询的状态量）
+            reactor = parameter_storage.reactor
+            reactor_state["reactor"] = {
+                "reactor_id": reactor.reactor_id,
+                "current_temperature": reactor.current_temperature,
+                "target_temperature": reactor.arget_temperature,
+                "stirring_status": reactor.stirring_status,
+                "stirring_speed": reactor.stirring_speed,
+                "n2_status": reactor.n2_status,
+                "air_status": reactor.air_status,
+                "status": reactor.status,
+                "error_message": reactor.error_message
+            }
+            print(f"要发送的当前反应器状态响应: {reactor_state}")
+        
+        # 如果有响应发送函数，则发送响应
+        if send_response_func:
+            try:
+                # 直接发送字典对象，让send_udp_response函数负责JSON序列化
+                send_response_func(reactor_state)
+            except Exception as e:
+                print(f"发送反应器状态响应时出错: {e}")
+        return
+    
+    # 检查是否为GET_POST_PROCESS_STATE消息（支持带参数和不带参数）
+    elif cmd == "GET_POST_PROCESS_STATE":
+        print("处理GET_POST_PROCESS_STATE请求")
+        
+        post_process_state = {"status": "success"}
+        
+        if param:
+            # 提取模块编号，如"module_1" -> 1
+            try:
+                module_num = int(param.split('_')[-1]) - 1  # 转换为0-based索引
+                if 0 <= module_num < len(parameter_storage.posttreatmentmodules):
+                    module = parameter_storage.posttreatmentmodules[module_num]
+                    # 只返回unilab查询的状态量
+                    post_process_state["module"] = {
+                        "post_process_id": module.post_process_id,
+                        "cleaning_status": module.cleaning_status,
+                        "discharge_status": module.discharge_status,
+                        "transferring_status": module.transferring_status,
+                        "start_bottle": module.start_bottle,
+                        "end_bottle": module.end_bottle,
+                        "current_volume": module.current_volume,
+                        "target_volume": module.target_volume,
+                        "status": module.status,
+                        "error_message": module.error_message
+                    }
+                    print(f"要发送的指定后处理模块({module_num + 1})状态响应: {post_process_state}")
+                else:
+                    post_process_state["status"] = "error"
+                    post_process_state["message"] = f"无效的模块编号: {module_num + 1}"
+                    print(f"无效的模块编号: {module_num + 1}")
+            except (ValueError, IndexError) as e:
+                post_process_state["status"] = "error"
+                post_process_state["message"] = f"参数解析错误: {e}"
+                print(f"参数解析错误: {e}")
+        else:
+            # 如果没有参数，只返回当前选中模块的信息（unilab查询的状态量）
+            module = parameter_storage.posttreatmentmodule
+            post_process_state["module"] = {
+                "post_process_id": module.post_process_id,
+                "cleaning_status": module.cleaning_status,
+                "discharge_status": module.discharge_status,
+                "transferring_status": module.transferring_status,
+                "start_bottle": module.start_bottle,
+                "end_bottle": module.end_bottle,
+                "current_volume": module.current_volume,
+                "target_volume": module.target_volume,
+                "status": module.status,
+                "error_message": module.error_message
+            }
+            print(f"要发送的当前后处理模块状态响应: {post_process_state}")
+        
+        # 如果有响应发送函数，则发送响应
+        if send_response_func:
+            try:
+                # 直接发送字典对象，让send_udp_response函数负责JSON序列化
+                send_response_func(post_process_state)
+            except Exception as e:
+                print(f"发送后处理模块状态响应时出错: {e}")
+        return
+    
+    # 如果是其他消息，继续执行原有的处理逻辑
+    # 使用generate_execution_sequence_from_content函数解析UDP消息
+    execution_sequence = generate_execution_sequence_from_content(message)
+    # 打印执行序列内容
+    print(f"\n解析后的执行序列:")
+    if execution_sequence:
+        for idx, (func, args) in enumerate(execution_sequence, 1):
+            # 获取函数名
+            func_name = func.__name__
+            # 查找对应的命令名
+            cmd_name = "未知命令"
+            for cmd, f in command_to_func.items():
+                if f == func:
+                    cmd_name = cmd
+                    break
+            print(f"  {idx}. 命令: {cmd_name}, 函数: {func_name}, 参数: {args}")
+    else:
+        print("  没有解析到有效的执行序列")
+    # 处理参数
+    processed_sequence = process_parameters_by_function(execution_sequence, device_manager) 
+    
+        
+    # 执行序列
+    execute_sequence(processed_sequence)
+
+    # 执行完后发送UDP响应
+    if send_response_func:
+        try:
+            # 调用预先设定了参数的闭包函数
+            send_response_func()
+        except Exception as e:
+            print(f"❌ 发送UDP响应失败: {e}")
+    
     
 
 

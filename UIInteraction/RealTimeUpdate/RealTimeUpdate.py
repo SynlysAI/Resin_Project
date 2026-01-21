@@ -12,7 +12,7 @@ class RealTimeUpdate:
         # 线程相关属性
         self.running = False
         self.update_thread = None
-        self.update_interval = 1.0  # 更新间隔，单位：秒
+        self.update_interval = 5  # 更新间隔，单位：秒
         self.start()
     
     def start(self):
@@ -46,6 +46,10 @@ class RealTimeUpdate:
     
     def update(self):
         """执行特定的函数并获取对应值，在参数管理器中进行更新"""
+        # 如果系统正忙（执行动作中），则跳过实时更新
+        if self.param_storage.is_system_busy:
+            return
+            
         if self.param_storage.is_reactor_connected:
             try:
                 motor_state = self.device_manager.current_motorzmc.get_state()
@@ -55,6 +59,16 @@ class RealTimeUpdate:
                 self.param_storage.get_motor_state = motor_state
                 self.param_storage.get_motor_speed = motor_speed
                 self.param_storage.get_temprature = temperature
+
+                # for i in range(len(self.device_manager.motorzmcs)):
+                #     motorzmc = self.device_manager.motorzmcs[i]
+                #     self.param_storage.reactors[i].motor_state = motorzmc.get_state()
+                #     self.param_storage.reactors[i].motor_speed = motorzmc.get_speed()
+                #
+                # for i in range(len(self.device_manager.temp_sensors)):
+                #     temp_sensor = self.device_manager.temp_sensors[i]
+                #     self.param_storage.reactors[i].temprature = temp_sensor.read_temperature()
+
             except Exception as e:
                 print(f"更新实时参数时出错: {e}")
                 
@@ -69,6 +83,19 @@ class RealTimeUpdate:
                 self.param_storage.get_discharge_valve_state = discharge_valve_state
                 self.param_storage.get_liquid_return_valve_state = liquid_return_valve_state
                 self.param_storage.get_water_valve_state = water_valve_state
+
+                # for i in range(len(self.device_manager.posttreatmentmodules)):
+                #     gas_valve=self.device_manager.gas_valves[i]
+                #     self.param_storage.posttreatmentmodules[i].gas_valve_state = gas_valve.get_state()
+                #
+                #     discharge_valve=self.device_manager.discharge_valves[i]
+                #     self.param_storage.posttreatmentmodules[i].discharge_valve_state = discharge_valve.get_state()
+                #
+                #     liquid_return_valve=self.device_manager.liquid_return_valves[i]
+                #     self.param_storage.posttreatmentmodules[i].liquid_return_valve_state = liquid_return_valve.get_state()
+                #
+                #     water_valve=self.device_manager.water_valves[i]
+                #     self.param_storage.posttreatmentmodules[i].water_valve_state = water_valve.get_state()
 
             except Exception as e:
                 print(f"更新实时参数时出错: {e}")

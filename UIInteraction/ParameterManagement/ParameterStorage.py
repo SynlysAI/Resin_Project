@@ -6,10 +6,31 @@ class ParameterStorage:
             self.temp_sense_address = Global.TEMP_SENSE_ADDRESSES[number]
             self.motor_axis = Global.MOTOR_AXIS_ADDRESSES[number]
             self.number=number
+
+            self.motor_state = False
+            self.motor_speed = 0
+            self.temprature = 0.0
+            # unilab查询状态量
+            self.reactor_id=number  # 反应器编号
+            self.current_temperature= 0.0  # 当前温度
+            self.arget_temperature= 0.0  # 目标温度
+            self.stirring_status= False  # 搅拌状态
+            self.stirring_speed= 0.0  # 搅拌转速
+            self.n2_status= False  # 氮气状态
+            self.air_status= False  # 空气状态
+            self.status= "idle"  # 运行状态：idle, running, error
+            self.error_message = ""  # 错误信息
+
         def set(self,number):
             self.temp_sense_address = Global.TEMP_SENSE_ADDRESSES[number]
             self.motor_axis = Global.MOTOR_AXIS_ADDRESSES[number]
             self.number = number
+
+            self.motor_state = False
+            self.motor_speed = 0
+            self.temprature = 0.0
+
+
 
     class PostTreatmentModule:
         def __init__(self,number):
@@ -20,6 +41,26 @@ class ParameterStorage:
             self.discharge_valve = Global.DISCHARGE_VALVES[number]
             self.liquid_return_valve = Global.LIQUID_RETURN_VALVES[number]
             self.number=number
+
+            self.motor_state_post = False
+            self.motor_speed_post = 0
+            self.gas_valve_state = False
+            self.discharge_valve_state = False
+            self.liquid_return_valve_state = False
+            self.water_valve_state = False
+            #unilab查询状态量
+            self.post_process_id=number # 后处理编号
+            self.cleaning_status= False  # 清洗状态
+            self.discharge_status= False  # 排液状态
+            self.transferring_status = False  # 溶液转移状态
+            self.start_bottle = ""  # 当前转移起始瓶
+            self.end_bottle = ""  # 当前转移终点瓶
+            self.current_volume = 0.0  # 当前转移体积
+            self.target_volume = 0.0  # 目标转移体积
+            self.status = "idle"  # 运行状态：idle, running, error
+            self.error_message = ""  # 错误信息
+
+
         def set(self,number):
             self.pump_address = Global.PUMP_ADDRESS[number]
             self.valve_address = Global.SWITCH_VALVE_ADDRESS[number]
@@ -29,17 +70,32 @@ class ParameterStorage:
             self.liquid_return_valve = Global.LIQUID_RETURN_VALVES[number]
             self.number=number
 
+            self.motor_state_post = False
+            self.motor_speed_post = 0
+            self.gas_valve_state = False
+            self.discharge_valve_state = False
+            self.liquid_return_valve_state = False
+
     def __init__(self):
         #存储设置参数，从inputActionManager类中的输入框得到
         self.is_reactor_connected = False  # 反应器模块连接状态
         self.is_postprocessing_connected = False  # 后处理模块连接状态
+        # 控制模式：True为本地控制模式，False为远程控制模式
+        self.is_local_control = True  # 默认本地控制模式
+        # 系统状态：True为系统正忙（执行动作中），False为空闲
+        self.is_system_busy = False  # 默认系统空闲
         # 初始化所有可能用到的变量
         self.select_port = ''  # 反应器选择的串口
         self.select_port_fixpump = ''  # 固定泵选择的串口
         self.select_port_post = ''  # 后处理模块选择的串口
         
-        self.reactor = self.Reactor(0)
-        self.posttreatmentmodule=self.PostTreatmentModule(0)
+        # 实例化所有反应器并放入列表
+        self.reactors = [self.Reactor(i) for i in range(len(Global.TEMP_SENSE_ADDRESSES))]
+        # 实例化所有后处理模块并放入列表
+        self.posttreatmentmodules = [self.PostTreatmentModule(i) for i in range(len(Global.PUMP_ADDRESS))]
+
+        self.reactor = self.reactors[0]
+        self.posttreatmentmodule=self.posttreatmentmodules[0]
         
         
         # 第一标签页：指定模块设置
@@ -90,6 +146,7 @@ class ParameterStorage:
         self.get_motor_state = False
         self.get_motor_speed = 0
         self.get_temprature = 0.0
+        #后处理模块部分显示参数
         self.get_motor_state_post = False
         self.get_motor_speed_post = 0
         self.get_gas_valve_state = False

@@ -25,7 +25,7 @@ class MainUI(QMainWindow):
         tab_widget.setGeometry(0, 0, 400, 200)
         # 设置全局字体大小
         tab_widget.setStyleSheet("QWidget { font-size: 20px; }")
-        tab_titles = ['指定模块设置', '后处理模块设置','三轴位置标定', '自动化程序', '工艺流程导入', '前处理配方设置', '测试界面']
+        tab_titles = ['指定模块设置', '后处理模块设置','三轴位置标定', '自动化程序', '工艺流程导入',  '测试界面']
         for idx, title in enumerate(tab_titles):
             tab = QWidget()
             layout = QVBoxLayout(tab)
@@ -143,205 +143,6 @@ class MainUI(QMainWindow):
                 progress_layout.addLayout(time_info_layout)
                 layout.addLayout(progress_layout)
             elif idx == 5:
-                # 前处理配方设置标签页
-                # 创建一个标题标签
-                title_label = QLabel('前处理配方设置')
-                title_label.setAlignment(Qt.AlignCenter)
-                title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
-                layout.addWidget(title_label)
-                
-                # 添加操作按钮区域
-                button_layout = QHBoxLayout()
-                button_layout.setAlignment(Qt.AlignCenter)
-                button_layout.setSpacing(20)
-                
-                # 导入配方文件按钮
-                import_button = QPushButton('导入配方文件')
-                import_button.setStyleSheet(
-                    "QPushButton {"
-                    "    background-color: #4a90e2;"
-                    "    color: white;"
-                    "    border: none;"
-                    "    border-radius: 6px;"
-                    "    padding: 10px 20px;"
-                    "    font-size: 16px;"
-                    "    font-weight: bold;"
-                    "}"
-                    "QPushButton:hover {"
-                    "    background-color: #357abd;"
-                    "}"
-                    "QPushButton:pressed {"
-                    "    background-color: #295f94;"
-                    "}"
-                )
-                import_button.setMinimumSize(150, 40)
-                button_layout.addWidget(import_button)
-                
-                # 配方录入按钮
-                save_button = QPushButton('配方录入')
-                save_button.setStyleSheet(
-                    "QPushButton {"
-                    "    background-color: #52c41a;"
-                    "    color: white;"
-                    "    border: none;"
-                    "    border-radius: 6px;"
-                    "    padding: 10px 20px;"
-                    "    font-size: 16px;"
-                    "    font-weight: bold;"
-                    "}"
-                    "QPushButton:hover {"
-                    "    background-color: #45a318;"
-                    "}"
-                    "QPushButton:pressed {"
-                    "    background-color: #388e14;"
-                    "}"
-                )
-                save_button.setMinimumSize(150, 40)
-                button_layout.addWidget(save_button)
-                
-                layout.addLayout(button_layout)
-                layout.addSpacing(30)
-                
-                # 创建一个滚动区域，设置为可以水平滚动
-                scroll_area = QScrollArea()
-                scroll_area.setWidgetResizable(True)
-                scroll_area.setStyleSheet("QScrollArea { border: none; }")
-                scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                
-                # 创建内容小部件
-                content_widget = QWidget()
-                content_widget.setStyleSheet("background-color: #fafafa;")
-                
-                # 创建水平布局来放置8个模块列
-                main_horizontal_layout = QHBoxLayout(content_widget)
-                main_horizontal_layout.setContentsMargins(30, 25, 30, 25)
-                main_horizontal_layout.setSpacing(15)
-                
-                # 为每个模块创建一个列
-                for module_idx in range(1, 9):
-                    # 创建模块组框
-                    module_group = QGroupBox(f"模块{module_idx}")
-                    module_group.setStyleSheet(
-                        "QGroupBox {"
-                        "    font-size: 16px;"
-                        "    font-weight: bold;"
-                        "    color: #333;"
-                        "    background-color: white;"
-                        "    border: 2px solid #d0d0d0;"
-                        "    border-radius: 10px;"
-                        "    padding: 20px 15px;"
-                        "    min-width: 280px;"  # 增加最小宽度以适应更宽的标签
-                        "    min-height: 480px;"  # 增加最小高度以适应11个变量行
-                        "}"
-                        "QGroupBox:title {"
-                        "    subcontrol-origin: margin;"
-                        "    subcontrol-position: top left;"
-                        "    padding: 0 10px;"
-                        "    background-color: transparent;"
-                        "    color: #2c3e50;"
-                        "}"
-                    )
-                    
-                    # 创建模块内部的垂直布局
-                    module_layout = QVBoxLayout()
-                    module_layout.setSpacing(14)  # 行间距
-                    module_layout.setContentsMargins(5, 5, 5, 5)
-                    
-                    # 定义11个变量的中文名称列表
-                    variable_names = [
-                        "甲基丙酸加液量（ml）",
-                        "聚合二氧六环加液量（ml）",
-                        "AIBME/乙晴加液量（ml）",
-                        "聚合升温保持温度（℃）",
-                        "聚合降温淬灭温度（℃）",
-                        "水解二氧六环加液量（ml）",
-                        "MeOH加液量（ml）",
-                        "一次氨水加液量（ml）",
-                        "二次氨水加液量（ml）",
-                        "水解升温保持温度（℃）",
-                        "稀盐酸加液量（ml）"
-                    ]
-                    
-                    # 为每个模块创建11个变量（11行）
-                    for var_idx in range(1, 12):
-                        # 创建变量行的水平布局
-                        var_row_layout = QHBoxLayout()
-                        var_row_layout.setSpacing(12)  # 标签和输入框之间的间距
-                        var_row_layout.setContentsMargins(0, 0, 0, 0)
-                        var_row_layout.setAlignment(Qt.AlignLeft)
-                        
-                        # 创建变量标签，使用中文名称
-                        var_label = QLabel(variable_names[var_idx - 1])
-                        var_label.setStyleSheet("font-size: 12px; font-weight: bold; color: #555;")
-                        var_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-                        var_label.setFixedWidth(120)  # 增加标签宽度以适应中文名称
-                        var_label.setMinimumHeight(30)  # 固定高度以保持对齐
-                        var_row_layout.addWidget(var_label)
-                        
-                        # 创建浮点数输入框
-                        var_name = f'line_module{module_idx}_var{var_idx}'
-                        line_edit = QLineEdit()
-                        line_edit.setObjectName(var_name)
-                        setattr(self, var_name, line_edit)
-                        
-                        # 添加浮点数验证器
-                        validator = QDoubleValidator(-999999.999, 999999.999, 3)
-                        validator.setNotation(QDoubleValidator.StandardNotation)
-                        line_edit.setValidator(validator)
-                        
-                        # 设置输入框样式，使所有输入框保持一致的外观
-                        line_edit.setStyleSheet(
-                            "QLineEdit {"
-                            "    background-color: #ffffff;"
-                            "    border: 1px solid #d0d0d0;"
-                            "    border-radius: 6px;"
-                            "    padding: 8px 10px;"
-                            "    font-size: 13px;"
-                            "    text-align: center;"
-                            "    min-height: 32px;"
-                            "    selection-background-color: #4a90e2;"
-                            "    selection-color: white;"
-                            "}"
-                            "QLineEdit:focus {"
-                            "    border: 2px solid #4a90e2;"
-                            "    background-color: #ffffff;"
-                            "    outline: none;"
-                            "}"
-                            "QLineEdit:hover:not(:focus) {"
-                            "    border: 1px solid #a0a0a0;"
-                            "}"
-                        )
-                        
-                        # 设置占位符文本
-                        line_edit.setPlaceholderText("0.000")
-                        line_edit.setMinimumWidth(110)
-                        line_edit.setMaximumWidth(120)  # 设置最大宽度保持一致性
-                        line_edit.setAlignment(Qt.AlignCenter)
-                        # 设置焦点策略，使用Tab键可以在输入框之间切换
-                        line_edit.setFocusPolicy(Qt.StrongFocus)
-                        var_row_layout.addWidget(line_edit)
-                        
-                        # 将变量行添加到模块布局
-                        module_layout.addLayout(var_row_layout)
-                    
-                    module_layout.addStretch()
-                    
-                    # 设置模块组框的布局
-                    module_group.setLayout(module_layout)
-                    
-                    # 添加到主水平布局
-                    main_horizontal_layout.addWidget(module_group)
-                
-                main_horizontal_layout.addStretch()
-                
-                # 设置滚动区域的内容
-                scroll_area.setWidget(content_widget)
-                
-                # 添加滚动区域到主布局
-                layout.addWidget(scroll_area, 1)
-                
-            elif idx == 6:
                 # 测试界面标签页
                 # 创建一个主水平布局来放置四列
                 main_horizontal_layout = QHBoxLayout()
@@ -399,10 +200,16 @@ class MainUI(QMainWindow):
                 self.btn_reactor_2 = QPushButton('2')
                 self.btn_reactor_3 = QPushButton('3')
                 self.btn_reactor_4 = QPushButton('4')
+                self.btn_reactor_5 = QPushButton('5')
+                self.btn_reactor_6 = QPushButton('6')
+                self.btn_reactor_7 = QPushButton('7')
+                self.btn_reactor_8 = QPushButton('8')
                 
                 # 应用样式并添加按钮
                 for btn in [self.btn_reactor_1, self.btn_reactor_2, 
-                           self.btn_reactor_3, self.btn_reactor_4]:
+                           self.btn_reactor_3, self.btn_reactor_4,
+                           self.btn_reactor_5, self.btn_reactor_6,
+                           self.btn_reactor_7, self.btn_reactor_8]:
                     btn.setStyleSheet(button_style)
                     col2_layout.addWidget(btn)
                     col2_layout.addSpacing(5)  # 添加间距
@@ -561,6 +368,10 @@ class MainUI(QMainWindow):
                 self.btn_valve_open_2 = QPushButton('反应器2')
                 self.btn_valve_open_3 = QPushButton('反应器3')
                 self.btn_valve_open_4 = QPushButton('反应器4')
+                self.btn_valve_open_5 = QPushButton('反应器5')
+                self.btn_valve_open_6 = QPushButton('反应器6')
+                self.btn_valve_open_7 = QPushButton('反应器7')
+                self.btn_valve_open_8 = QPushButton('反应器8')
                 
                 # 气阀关子列
                 valve_close_layout = QVBoxLayout()
@@ -574,6 +385,10 @@ class MainUI(QMainWindow):
                 self.btn_valve_close_2 = QPushButton('反应器2')
                 self.btn_valve_close_3 = QPushButton('反应器3')
                 self.btn_valve_close_4 = QPushButton('反应器4')
+                self.btn_valve_close_5 = QPushButton('反应器5')
+                self.btn_valve_close_6 = QPushButton('反应器6')
+                self.btn_valve_close_7 = QPushButton('反应器7')
+                self.btn_valve_close_8 = QPushButton('反应器8')
                 
                 # 为气阀开按钮设置绿色样式
                 valve_open_style = button_style.replace("background-color: #f0f0f0;", "background-color: #4caf50;")
@@ -588,13 +403,15 @@ class MainUI(QMainWindow):
                 valve_close_style = valve_close_style.replace("QPushButton:pressed {\n                        background-color: #d0d0d0;", "QPushButton:pressed {\n                        background-color: #b71c1c;")
                 
                 # 应用样式并添加气阀开按钮
-                for btn in [self.btn_valve_open_1, self.btn_valve_open_2, self.btn_valve_open_3, self.btn_valve_open_4]:
+                for btn in [self.btn_valve_open_1, self.btn_valve_open_2, self.btn_valve_open_3, self.btn_valve_open_4,
+                            self.btn_valve_open_5, self.btn_valve_open_6, self.btn_valve_open_7, self.btn_valve_open_8]:
                     btn.setStyleSheet(valve_open_style)
                     valve_open_layout.addWidget(btn)
                     valve_open_layout.addSpacing(5)
                 
                 # 应用样式并添加气阀关按钮
-                for btn in [self.btn_valve_close_1, self.btn_valve_close_2, self.btn_valve_close_3, self.btn_valve_close_4]:
+                for btn in [self.btn_valve_close_1, self.btn_valve_close_2, self.btn_valve_close_3, self.btn_valve_close_4,
+                            self.btn_valve_close_5, self.btn_valve_close_6, self.btn_valve_close_7, self.btn_valve_close_8]:
                     btn.setStyleSheet(valve_close_style)
                     valve_close_layout.addWidget(btn)
                     valve_close_layout.addSpacing(5)
@@ -620,6 +437,36 @@ class MainUI(QMainWindow):
                 
                 # 添加到主布局
                 layout.addLayout(main_horizontal_layout)
+                
+                # 添加控制模式切换按钮
+                layout.addSpacing(20)  # 添加间距
+                mode_switch_layout = QHBoxLayout()
+                mode_switch_layout.setAlignment(Qt.AlignCenter)
+                
+                self.label_control_mode = QLabel('控制模式:')
+                self.label_control_mode.setStyleSheet("font-weight: bold; font-size: 20px;")
+                
+                self.btn_mode_switch = QPushButton('本地控制模式')
+                self.btn_mode_switch.setStyleSheet("""
+                    QPushButton {
+                        background-color: #4CAF50;
+                        color: white;
+                        font-size: 20px;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                    }
+                    QPushButton:hover {
+                        background-color: #45a049;
+                    }
+                    QPushButton:pressed {
+                        background-color: #3d8b40;
+                    }
+                """)
+                
+                mode_switch_layout.addWidget(self.label_control_mode)
+                mode_switch_layout.addWidget(self.btn_mode_switch)
+                layout.addLayout(mode_switch_layout)
                 
                 # 添加多步动作和待机位置按钮
                 layout.addSpacing(20)  # 添加间距

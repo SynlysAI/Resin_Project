@@ -161,13 +161,13 @@ class InputActionManager:
             elif combo_name == 'combo_reactor':
                 # 设置反应器模块，更新对应的地址信息
                 module_number = int(selected_value) - 1  # 假设模块编号从1开始，而数组从0开始
-                self.parameter_storage.reactor.set(module_number)
+                self.parameter_storage.reactor = self.parameter_storage.reactors[module_number]
             elif combo_name == 'combo_port_post':
                 self.parameter_storage.select_port_post = selected_value
             elif combo_name == 'combo_post_module':
                 # 设置后处理模块，更新对应的地址信息
                 module_number = int(selected_value) - 1  # 假设模块编号从1开始，而数组从0开始
-                self.parameter_storage.posttreatmentmodule.set(module_number)
+                self.parameter_storage.posttreatmentmodule = self.parameter_storage.posttreatmentmodules[module_number]
             elif combo_name == 'combo_select_head':
                 self.parameter_storage.select_test_head = int(selected_value)   # 假设模块编号从1开始，而数组从0开始
         
