@@ -4,6 +4,7 @@
 import sys
 import os
 import tempfile
+import json
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem
 
 
@@ -20,6 +21,7 @@ from BusinessActions.SingleStepActions.TemperatureControlAction import *
 from BusinessActions.SingleStepActions.ValveAction import *
 from BusinessActions.DeviceManager import DeviceManager
 from UIInteraction.ParameterManagement.ParameterStorage import ParameterStorage
+
 # ------------------------------
 # 第二步：核心配置（命令名→函数映射）
 # ------------------------------
@@ -35,10 +37,9 @@ command_to_func = {
     "TEMP_SET": Temp_set,
     "START_STIR": Start_Reactor_Stirrer,
     "STOP_STIR": Stop_Reactor_Stirrer,
-    "POST_PROCESS_Discharge_On": Post_Process_Discharge_On,
-    "POST_PROCESS_Discharge_Off": Post_Process_Discharge_Off,
+    "POST_PROCESS_DISCHARGE_ON": Post_Process_Discharge_On,
+    "POST_PROCESS_DISCHARGE_OFF": Post_Process_Discharge_Off,
     "WAIT": Wait
-    
 }
 
 # ------------------------------
@@ -90,6 +91,59 @@ def generate_execution_sequence(file_path):
         print(f"❌ 读取文件失败：{e}")
     
     return execution_sequence
+
+def generate_execution_sequence_from_content(content):
+    """
+    根据传入的文本内容生成 (函数对象, 参数列表) 的可执行序列
+    
+    :param content: 工艺文件的文本内容
+    :return: 执行序列，格式为 [(函数对象, 参数列表), ...]
+    """
+    execution_sequence = []
+    
+    try:
+        # 将文本内容按行分割
+        lines = content.splitlines()
+        
+        for line_num, line in enumerate(lines, 1):
+            stripped_line = line.strip()
+            
+            # 过滤注释行（#开头）和空行
+            if not stripped_line or stripped_line.startswith('#'):
+                continue
+            
+            # 只处理S开头的有效命令
+            if stripped_line.startswith('S '):
+                try:
+                    # 提取命令名（S 后面 → ( 前面）
+                    bracket_left = stripped_line.find('(')
+                    bracket_right = stripped_line.find(')')
+                    if bracket_left == -1 or bracket_right == -1:
+                        raise ValueError("缺少 '(' 或 ')'")
+                    
+                    command_name = stripped_line[len('S '):bracket_left].strip()
+                    if not command_name:
+                        raise ValueError("命令名为空")
+                    
+                    # 提取参数（( 里面 → ) 前面，按逗号分割）
+                    param_str = stripped_line[bracket_left+1:bracket_right].strip()
+                    parameters = [p.strip() for p in param_str.split(',')] if param_str else []
+                    
+                    # 检查命令是否有对应函数
+                    if command_name not in command_to_func:
+                        raise ValueError(f"无对应执行函数")
+                    
+                    # 加入执行序列（函数对象 + 参数列表）
+                    execution_sequence.append( (command_to_func[command_name], parameters) )
+                    
+                except Exception as e:
+                    print(f"⚠️  第{line_num}行命令无效，跳过：{e} | 原始内容：{stripped_line}")
+    
+    except Exception as e:
+        print(f"❌ 处理文本内容失败：{e}")
+    
+    return execution_sequence
+
 
 # ------------------------------
 # 第四步：根据函数名称处理参数
@@ -400,7 +454,50 @@ def Import_Process_UDP(table_widget):
     # 移除临时文件
     os.remove(temp_file_path)
 
-    
+
+def Import_Parament_UDP(message, device_manager: DeviceManager, send_response_func=None):
+    """
+    处理接收到的UDP消息，使用generate_execution_sequence_from_content函数解析，并打印执行序列
+
+    :param message: 接收到的UDP消息字符串
+    :param device_manager: 设备管理器实例
+    :param send_response_func: UDP响应发送函数（可以是预先设定了参数的闭包函数）
+    """
+    print(f"接收到的原始UDP消息: {message}")
+    # 如果是其他消息，继续执行原有的处理逻辑
+    # 使用generate_execution_sequence_from_content函数解析UDP消息
+    execution_sequence = generate_execution_sequence_from_content(message)
+    # 打印执行序列内容
+    print(f"\n解析后的执行序列:")
+    if execution_sequence:
+        for idx, (func, args) in enumerate(execution_sequence, 1):
+            # 获取函数名
+            func_name = func.__name__
+            # 查找对应的命令名
+            cmd_name = "未知命令"
+            for cmd, f in command_to_func.items():
+                if f == func:
+                    cmd_name = cmd
+                    break
+            print(f"  {idx}. 命令: {cmd_name}, 函数: {func_name}, 参数: {args}")
+    else:
+        print("  没有解析到有效的执行序列")
+    # 处理参数
+    processed_sequence = process_parameters_by_function(execution_sequence, device_manager)
+
+
+    # 执行序列
+    execute_sequence(processed_sequence)
+
+    # 执行完后发送UDP响应
+    if send_response_func:
+        try:
+            # 调用预先设定了参数的闭包函数
+            send_response_func()
+        except Exception as e:
+            print(f"❌ 发送UDP响应失败: {e}")
+
+
 
 
 # ------------------------------

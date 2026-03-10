@@ -59,7 +59,7 @@ class DeviceState:
     current_volume: float = 0.0  # 当前添加的体积
     target_volume: float = 0.0  # 目标添加体积
     current_reactor_id: int = 0  # 当前添加的反应器编号
-    
+
     def __post_init__(self):
         if self.reactors is None:
             self.reactors = {}
@@ -72,6 +72,7 @@ class UDPClient:
     """
     UDP客户端类，用于与设备进行通信
     """
+
     def __init__(self, address: str = "127.0.0.1", port: int = 8888, timeout: float = 5.0):
         self.address = address
         self.port = port
@@ -82,11 +83,11 @@ class UDPClient:
         self.status_callback = None  # 状态更新回调函数
         self.listen_thread = None  # 状态监听线程
         self.listen_running = False  # 监听线程运行状态
-    
+
     def connect(self) -> bool:
         """
         连接到UDP服务器
-        
+
         Returns:
             bool: 连接成功返回True，否则返回False
         """
@@ -101,16 +102,16 @@ class UDPClient:
             logger.error(f"UDP客户端初始化失败: {e}")
             self.connected = False
             return False
-    
+
     def set_status_callback(self, callback):
         """
         设置状态更新回调函数
-        
+
         Args:
             callback: 回调函数，接收状态数据作为参数
         """
         self.status_callback = callback
-    
+
     def start_listen(self):
         """
         启动状态监听线程
@@ -118,12 +119,12 @@ class UDPClient:
         if self.listen_running:
             logger.warning("状态监听线程已在运行")
             return
-            
+
         self.listen_running = True
         self.listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
         self.listen_thread.start()
         logger.info("UDP状态监听线程已启动")
-    
+
     def stop_listen(self):
         """
         停止状态监听线程
@@ -133,7 +134,7 @@ class UDPClient:
             self.listen_thread.join(timeout=1.0)
             self.listen_thread = None
         logger.info("UDP状态监听线程已停止")
-    
+
     def _listen_loop(self):
         """
         状态监听循环，接收服务器主动推送的状态更新
@@ -143,12 +144,12 @@ class UDPClient:
                 # 设置较短的超时，以便定期检查listen_running状态
                 self.socket.settimeout(0.5)
                 response_data, _ = self.socket.recvfrom(1024)
-                
+
                 # 尝试解析JSON响应
                 try:
                     response = json.loads(response_data.decode('utf-8'))
                     logger.debug(f"收到UDP状态更新: {response}")
-                    
+
                     # 如果是状态更新消息，调用回调函数
                     if response.get("type") == "status_update" and self.status_callback:
                         self.status_callback(response.get("data", {}))
@@ -161,18 +162,18 @@ class UDPClient:
                 logger.error(f"UDP监听错误: {e}")
                 # 短暂暂停后继续监听
                 time.sleep(0.5)
-    
+
     def disconnect(self) -> bool:
         """
         断开UDP连接
-        
+
         Returns:
             bool: 断开成功返回True，否则返回False
         """
         try:
             # 停止监听线程
             self.stop_listen()
-            
+
             if self.socket:
                 self.socket.close()
                 self.socket = None
@@ -182,15 +183,15 @@ class UDPClient:
         except Exception as e:
             logger.error(f"UDP客户端断开连接失败: {e}")
             return False
-    
+
     def send_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         发送命令到UDP服务器
-        
+
         Args:
             command: 命令名称
             params: 命令参数
-            
+
         Returns:
             Dict[str, Any]: 服务器响应
         """
@@ -198,7 +199,7 @@ class UDPClient:
             if not self.connected or not self.socket:
                 logger.error("UDP客户端未连接")
                 return {"status": "error", "message": "UDP客户端未连接"}
-            
+
             try:
                 # 构建函数调用格式命令
                 params = params or {}
@@ -223,10 +224,10 @@ class UDPClient:
                 data = cmd_str.encode('utf-8')
                 self.socket.sendto(data, (self.address, self.port))
                 logger.debug(f"发送UDP命令: {command}, 参数: {params}")
-                
+
                 try:
                     # 接收响应 - 增加超时时间到2秒
-                    self.socket.settimeout(2.0)
+                    self.socket.settimeout(5.0)
                     response_data, _ = self.socket.recvfrom(1024)
                     response = json.loads(response_data.decode('utf-8'))
                     logger.debug(f"收到UDP响应: {response}")
@@ -254,22 +255,23 @@ class ResinWorkstation:
     """
     Resin工作站驱动类
     """
+
     def __init__(self,
-        address: str = "127.0.0.1",
-        port: int = 8888,
-        debug_mode: bool = False,
-    ):
+                 address: str = "127.0.0.1",
+                 port: int = 8888,
+                 debug_mode: bool = False,
+                 ):
 
         self.debug_mode = debug_mode
 
         # UDP客户端初始化
         self.udp_client = UDPClient(address, port)
         self.connected = False
-        
+
         # 设备状态
         self.success = False
         self.operation_mode = "local"  # local or remote
-        
+
         # 初始化设备状态对象
         self._device_state = DeviceState()
         # 设置UDP客户端的状态更新回调
@@ -279,11 +281,11 @@ class ResinWorkstation:
     def connect_device(self, address: str = None, port: int = None) -> bool:
         """
         连接设备
-        
+
         Args:
             address: 设备IP地址
             port: 设备端口
-            
+
         Returns:
             bool: 连接成功返回True，否则返回False
         """
@@ -291,48 +293,48 @@ class ResinWorkstation:
             self.udp_client.address = address
         if port:
             self.udp_client.port = port
-        
+
         self.connected = self.udp_client.connect()
-        
+
         # 如果连接成功，启动状态监听
         if self.connected:
             self.udp_client.start_listen()
             # 更新设备状态
             self._device_state.connected = True
             self._device_state.operation_mode = self.operation_mode
-        
+
         return self.connected
 
     def disconnect_device(self) -> bool:
         """
         断开设备连接
-        
+
         Returns:
             bool: 断开成功返回True，否则返回False
         """
         success = not self.udp_client.disconnect()
         self.connected = not success
-        
+
         # 更新设备状态
         self._device_state.connected = False
         self._device_state.device_status = "idle"
-        
+
         return success
 
     def toggle_local_remote_control(self, mode: str) -> bool:
         """
         切换本地/远程控制模式
-        
+
         Args:
             mode: 控制模式，"local"或"remote"
-            
+
         Returns:
             bool: 切换成功返回True，否则返回False
         """
         if mode not in ["local", "remote"]:
             logger.error(f"无效的控制模式: {mode}")
             return False
-        
+
         try:
             response = self.udp_client.send_command("TOGGLE_LOCAL_REMOTE_CONTROL", {"mode": mode})
             if response.get("status") == "success":
@@ -344,81 +346,81 @@ class ResinWorkstation:
         except Exception as e:
             logger.error(f"切换控制模式异常: {e}")
             return False
-    
+
     # ====================== 状态查询方法 ======================
     def _get_device_state(self) -> DeviceState:
         """
         获取设备整体状态
-        
+
         Returns:
             DeviceState: 设备整体状态对象
         """
         # 如果是调试模式，直接返回当前状态
         if self.debug_mode:
             return self._device_state
-        
+
         # 发送状态查询命令
         response = self.udp_client.send_command("GET_DEVICE_STATE")
         if response.get("status") == "success":
             # 更新设备状态
             self.update_state(response.get("data", {}))
-        
+
         return self._device_state
-    
+
     def _get_reactor_state(self, reactor_id: int) -> Optional[ReactorState]:
         """
         获取单个反应器状态
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
             Optional[ReactorState]: 反应器状态对象，若不存在则返回None
         """
         # 如果是调试模式，直接返回当前状态
         if self.debug_mode:
             return self._device_state.reactors.get(reactor_id)
-        
+
         # 发送反应器状态查询命令
         response = self.udp_client.send_command("GET_REACTOR_STATE", {"reactor_id": reactor_id})
         if response.get("status") == "success":
             # 更新反应器状态
             self.update_state({"reactors": {reactor_id: response.get("data", {})}})
-        
+
         return self._device_state.reactors.get(reactor_id)
-    
+
     def _get_post_process_state(self, post_process_id: int) -> Optional[PostProcessState]:
         """
         获取单个后处理系统状态
-        
+
         Args:
             post_process_id: 后处理编号
-            
+
         Returns:
             Optional[PostProcessState]: 后处理系统状态对象，若不存在则返回None
         """
         # 如果是调试模式，直接返回当前状态
         if self.debug_mode:
             return self._device_state.post_processes.get(post_process_id)
-        
+
         # 发送后处理状态查询命令
         response = self.udp_client.send_command("GET_POST_PROCESS_STATE", {"post_process_id": post_process_id})
         if response.get("status") == "success":
             # 更新后处理状态
             self.update_state({"post_processes": {post_process_id: response.get("data", {})}})
-        
+
         return self._device_state.post_processes.get(post_process_id)
-    
+
     def update_state(self, state_data: Dict[str, Any]) -> None:
         """
         更新设备状态
-        
+
         Args:
             state_data: 状态数据字典
         """
         if not state_data:
             return
-        
+
         # 更新设备基本状态
         if "connected" in state_data:
             self._device_state.connected = state_data["connected"]
@@ -438,7 +440,7 @@ class ResinWorkstation:
             self._device_state.target_volume = state_data["target_volume"]
         if "current_reactor_id" in state_data:
             self._device_state.current_reactor_id = state_data["current_reactor_id"]
-        
+
         # 更新反应器状态
         if "reactors" in state_data:
             for reactor_id, reactor_state_data in state_data["reactors"].items():
@@ -446,83 +448,82 @@ class ResinWorkstation:
                 # 如果反应器不存在，创建新的ReactorState对象
                 if reactor_id not in self._device_state.reactors:
                     self._device_state.reactors[reactor_id] = ReactorState(reactor_id=reactor_id)
-                
+
                 # 更新反应器状态属性
                 reactor = self._device_state.reactors[reactor_id]
                 for key, value in reactor_state_data.items():
                     if hasattr(reactor, key):
                         setattr(reactor, key, value)
-        
+
         # 更新后处理系统状态
         if "post_processes" in state_data:
             for post_process_id, post_process_state_data in state_data["post_processes"].items():
                 post_process_id = int(post_process_id)
                 # 如果后处理系统不存在，创建新的PostProcessState对象
                 if post_process_id not in self._device_state.post_processes:
-                    self._device_state.post_processes[post_process_id] = PostProcessState(post_process_id=post_process_id)
-                
+                    self._device_state.post_processes[post_process_id] = PostProcessState(
+                        post_process_id=post_process_id)
+
                 # 更新后处理系统状态属性
                 post_process = self._device_state.post_processes[post_process_id]
                 for key, value in post_process_state_data.items():
                     if hasattr(post_process, key):
                         setattr(post_process, key, value)
-        
+
         # 更新最后更新时间
         self._device_state.last_updated = time.strftime("%Y-%m-%d %H:%M:%S")
         logger.debug(f"设备状态已更新: {self._device_state}")
-    
+
     def _handle_status_update(self, state_data: Dict[str, Any]) -> None:
         """
         处理UDP服务器主动推送的状态更新
-        
+
         Args:
             state_data: 状态数据字典
         """
         self.update_state(state_data)
 
     # ====================== 指令集实现 ======================
-    def _send_command(self, command: str, params: Dict[str, Any] = None) -> bool:
+    def _send_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         发送命令的通用方法
-        
+
         Args:
             command: 命令名称
             params: 命令参数
-            
+
         Returns:
-            bool: 命令执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         if self.debug_mode:
-            logger.info(f"调试模式: 发送命令 {command}, 参数: {params}")
-            return True
-        
+            msg = f"调试模式: 发送命令 {command}, 参数: {params}"
+            logger.info(msg)
+            return {"status": "success", "message": msg}
+
         if not self.connected:
             logger.error("设备未连接，无法发送命令")
-            return False
-        
+            return {"status": "error", "message": "设备未连接，无法发送命令"}
+
         response = self.udp_client.send_command(command, params)
-        
-        # # 更新设备状态（无论命令是否成功，都更新状态）
-        # self._get_device_state()
-        #
+
         if response.get("status") == "success":
-            return True
+            return response
         else:
             logger.error(f"命令执行失败: {command}, 错误: {response.get('message')}")
-            return False
+            return response
 
     # ========== 移液操作指令集 ==========
-    def reactor_solution_add(self, solution_id: int, volume: float, reactor_id: int) -> bool:
+    def reactor_solution_add(self, solution_id: int, volume: float, reactor_id: int) -> Dict[str, Any]:
         """
         向反应器添加溶液
-        
+
         Args:
             solution_id: 溶液编号
             volume: 加入体积
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "solution_id": solution_id,
@@ -531,20 +532,20 @@ class ResinWorkstation:
         }
         return self._send_command("REACTOR_SOLUTION_ADD", params)
 
-    def post_process_solution_add(self, start_bottle: str, end_bottle: str, volume: float, 
-                                 inject_speed: float, suck_speed: float = 4.0) -> bool:
+    def post_process_solution_add(self, start_bottle: str, end_bottle: str, volume: float,
+                                  inject_speed: float, suck_speed: float = 4.0) -> Dict[str, Any]:
         """
         后处理溶液转移
-        
+
         Args:
             start_bottle: 出发瓶
             end_bottle: 终点瓶
             volume: 加入体积
             inject_speed: 注入速度
             suck_speed: 吸入速度，默认4.0
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "start_bottle": start_bottle,
@@ -555,15 +556,15 @@ class ResinWorkstation:
         }
         return self._send_command("POST_PROCESS_SOLUTION_ADD", params)
 
-    def post_process_clean(self, post_process_id: int) -> bool:
+    def post_process_clean(self, post_process_id: int) -> Dict[str, Any]:
         """
         自动清洗程序
-        
+
         Args:
             post_process_id: 后处理编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "post_process_id": post_process_id
@@ -571,76 +572,76 @@ class ResinWorkstation:
         return self._send_command("POST_PROCESS_CLEAN", params)
 
     # ========== 反应器操作指令集 ==========
-    def reactor_n2_on(self, reactor_id: int) -> bool:
+    def reactor_n2_on(self, reactor_id: int) -> Dict[str, Any]:
         """
         打开反应器氮气
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id
         }
         return self._send_command("REACTOR_N2_ON", params)
 
-    def reactor_n2_off(self, reactor_id: int) -> bool:
+    def reactor_n2_off(self, reactor_id: int) -> Dict[str, Any]:
         """
         关闭反应器氮气
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id
         }
         return self._send_command("REACTOR_N2_OFF", params)
 
-    def reactor_air_on(self, reactor_id: int) -> bool:
+    def reactor_air_on(self, reactor_id: int) -> Dict[str, Any]:
         """
         打开反应器空气
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id
         }
         return self._send_command("REACTOR_AIR_ON", params)
 
-    def reactor_air_off(self, reactor_id: int) -> bool:
+    def reactor_air_off(self, reactor_id: int) -> Dict[str, Any]:
         """
         关闭反应器空气
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id
         }
         return self._send_command("REACTOR_AIR_OFF", params)
 
-    def temp_set(self, reactor_id: int, temperature: float) -> bool:
+    def temp_set(self, reactor_id: int, temperature: float) -> Dict[str, Any]:
         """
         设置温度
-        
+
         Args:
             reactor_id: 反应器编号
             temperature: 温度
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id,
@@ -649,16 +650,16 @@ class ResinWorkstation:
         return self._send_command("TEMP_SET", params)
 
     # ========== 搅拌器操作指令集 ==========
-    def start_reactor_stirrer(self, reactor_id: int, speed: float) -> bool:
+    def start_reactor_stirrer(self, reactor_id: int, speed: float) -> Dict[str, Any]:
         """
         启动反应器搅拌器
-        
+
         Args:
             reactor_id: 反应器编号
             speed: 转速
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id,
@@ -666,15 +667,15 @@ class ResinWorkstation:
         }
         return self._send_command("START_STIR", params)
 
-    def stop_reactor_stirrer(self, reactor_id: int) -> bool:
+    def stop_reactor_stirrer(self, reactor_id: int) -> Dict[str, Any]:
         """
         停止反应器搅拌器
-        
+
         Args:
             reactor_id: 反应器编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "reactor_id": reactor_id
@@ -682,30 +683,30 @@ class ResinWorkstation:
         return self._send_command("STOP_STIR", params)
 
     # ========== 后处理排液操作指令集 ==========
-    def post_process_discharge_on(self, post_process_id: int) -> bool:
+    def post_process_discharge_on(self, post_process_id: int) -> Dict[str, Any]:
         """
         打开后处理排液
-        
+
         Args:
             post_process_id: 后处理编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "post_process_id": post_process_id
         }
         return self._send_command("POST_PROCESS_DISCHARGE_ON", params)
 
-    def post_process_discharge_off(self, post_process_id: int) -> bool:
+    def post_process_discharge_off(self, post_process_id: int) -> Dict[str, Any]:
         """
         关闭后处理排液
-        
+
         Args:
             post_process_id: 后处理编号
-            
+
         Returns:
-            bool: 执行成功返回True，否则返回False
+            Dict[str, Any]: 命令执行结果，格式为 {"status": "success/error", "message": "..."}
         """
         params = {
             "post_process_id": post_process_id
@@ -716,10 +717,10 @@ class ResinWorkstation:
     def wait(self, seconds: int) -> bool:
         """
         等待指定时间
-        
+
         Args:
             seconds: 等待时间（秒）
-            
+
         Returns:
             bool: 执行成功返回True，否则返回False
         """
@@ -734,22 +735,22 @@ class ResinWorkstation:
     def device_status(self) -> Dict[str, Any]:
         """
         获取设备状态
-        
+
         Returns:
             Dict[str, Any]: 设备状态信息
         """
         # 获取最新设备状态
         self._get_device_state()
-        
+
         # 将DeviceState对象转换为字典
         status_dict = asdict(self._device_state)
-        
+
         # 添加额外的设备信息
         status_dict.update({
             "address": self.udp_client.address,
             "port": self.udp_client.port
         })
-        
+
         # 如果是调试模式，覆盖相关状态
         if self.debug_mode:
             status_dict.update({
@@ -759,5 +760,5 @@ class ResinWorkstation:
         else:
             # 更新连接状态
             status_dict["connected"] = self.connected
-        
+
         return status_dict

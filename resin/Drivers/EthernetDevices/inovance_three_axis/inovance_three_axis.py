@@ -3,6 +3,7 @@ from platform import node
 import re
 #from pymodbus.client import ModbusTcpClient
 from Drivers.EthernetDevices.inovance_three_axis.tools.modbus import WorderOrder, Coil, DiscreteInputs, HoldRegister, InputRegister, DataType
+from pymodbus.constants import Endian
 import time
 import threading
 import csv
@@ -280,7 +281,50 @@ class Inovance_Three_Axis:
         else:
             cmd_feedback, read_err = self.client.use_node('COIL_AXIS_X_POS_10_CMD').read(1)
             return cmd_feedback[0]
-
+    def axis_x_pos_11_cmd(self,cmd):
+        """x轴回位置11命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_X_POS_11_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_X_POS_11_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_x_pos_12_cmd(self,cmd):
+        """x轴回位置12命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_X_POS_12_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_X_POS_12_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_x_pos_13_cmd(self,cmd):
+        """x轴回位置13命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_X_POS_13_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_X_POS_13_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_x_pos_14_cmd(self,cmd):
+        """x轴回位置14命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_X_POS_14_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_X_POS_14_CMD').read(1)
+            return cmd_feedback[0]
 
     def axis_y_power_on_cmd(self, cmd):
         """y轴上电命令 (可读写)"""
@@ -445,6 +489,50 @@ class Inovance_Three_Axis:
         else:  # 读取模式
             cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Y_POS_10_CMD').read(1)
             return cmd_feedback[0]
+    def axis_y_pos_11_cmd(self,cmd):
+        """y轴回位置11命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node= self.client.use_node('COIL_AXIS_Y_POS_11_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Y_POS_11_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_y_pos_12_cmd(self,cmd):
+        """y轴回位置12命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node= self.client.use_node('COIL_AXIS_Y_POS_12_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Y_POS_12_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_y_pos_13_cmd(self,cmd):
+        """y轴回位置13命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node= self.client.use_node('COIL_AXIS_Y_POS_13_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Y_POS_13_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_y_pos_14_cmd(self,cmd):
+        """y轴回位置14命令（可读写）"""
+        if cmd is not None:
+            self.success = False
+            node= self.client.use_node('COIL_AXIS_Y_POS_14_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Y_POS_14_CMD').read(1)
+            return cmd_feedback[0]
     
     def axis_z_power_on_cmd(self, cmd):
         """z轴上电命令 (可读写)"""
@@ -605,6 +693,50 @@ class Inovance_Three_Axis:
             return self.success
         else:  # 读取模式
             cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Z_POS_10_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_z_pos_11_cmd(self, cmd):
+        """z轴回位置11命令 (可读写)"""
+        if cmd is not None:  # 写入模式
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_Z_POS_11_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Z_POS_11_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_z_pos_12_cmd(self, cmd):
+        """z轴回位置12命令 (可读写)"""
+        if cmd is not None:  # 写入模式
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_Z_POS_12_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Z_POS_12_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_z_pos_13_cmd(self, cmd):
+        """z轴回位置13命令 (可读写)"""
+        if cmd is not None:  # 写入模式
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_Z_POS_13_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Z_POS_13_CMD').read(1)
+            return cmd_feedback[0]
+    def axis_z_pos_14_cmd(self, cmd):
+        """z轴回位置14命令 (可读写)"""
+        if cmd is not None:  # 写入模式
+            self.success = False
+            node = self.client.use_node('COIL_AXIS_Z_POS_14_CMD')
+            ret = node.write(cmd)
+            self.success = ret
+            return self.success
+        else:  # 读取模式
+            cmd_feedback, read_err = self.client.use_node('COIL_AXIS_Z_POS_14_CMD').read(1)
             return cmd_feedback[0]
 
     def gripper_init_cmd(self, cmd):
@@ -984,6 +1116,29 @@ class Inovance_Three_Axis:
         status, read_err = self.client.use_node('COIL_AXIS_X_POS_10_STATUS').read(1)
         return status[0]
 
+    @property
+    def axis_x_pos_11_status(self) -> bool:
+        """X轴位置11反馈 (BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_X_POS_11_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_x_pos_12_status(self) -> bool:
+        """X轴位置12反馈 (BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_X_POS_12_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_x_pos_13_status(self) -> bool:
+        """X轴位置13反馈 (BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_X_POS_13_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_x_pos_14_status(self) -> bool:
+        """X轴位置14反馈 (BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_X_POS_14_STATUS').read(1)
+        return status[0]
 
     @property
     def axis_y_power_on_status(self) -> bool:
@@ -1064,6 +1219,30 @@ class Inovance_Three_Axis:
         return status[0]
 
     @property
+    def axis_y_pos_11_status(self) -> bool:
+        """y轴位置11反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Y_POS_11_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_y_pos_12_status(self) -> bool:
+        """y轴位置12反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Y_POS_12_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_y_pos_13_status(self) -> bool:
+        """y轴位置13反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Y_POS_13_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_y_pos_14_status(self) -> bool:
+        """y轴位置14反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Y_POS_14_STATUS').read(1)
+        return status[0]
+
+    @property
     def axis_z_power_on_status(self) -> bool:
         """z轴上电状态( BOOL)"""
         status, read_err = self.client.use_node('COIL_AXIS_Z_POWER_ON_STATUS').read(1)
@@ -1139,6 +1318,30 @@ class Inovance_Three_Axis:
     def axis_z_pos_10_status(self) -> bool:
         """z轴位置10反馈(BOOL)"""
         status, read_err = self.client.use_node('COIL_AXIS_Z_POS_10_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_z_pos_11_status(self) -> bool:
+        """z轴位置11反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Z_POS_11_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_z_pos_12_status(self) -> bool:
+        """z轴位置12反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Z_POS_12_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_z_pos_13_status(self) -> bool:
+        """z轴位置13反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Z_POS_13_STATUS').read(1)
+        return status[0]
+
+    @property
+    def axis_z_pos_14_status(self) -> bool:
+        """z轴位置14反馈(BOOL)"""
+        status, read_err = self.client.use_node('COIL_AXIS_Z_POS_14_STATUS').read(1)
         return status[0]
 
     @property
@@ -1327,6 +1530,38 @@ class Inovance_Three_Axis:
             time.sleep(1)
         print('axis_x_pos_10_status:', self.axis_x_pos_10_status)
         print('pos 10 cmd:', self.axis_x_pos_10_cmd(False))
+    
+    def axis_x_pos_11(self):
+        print('pos 11 cmd:', self.axis_x_pos_11_cmd(True))
+        while not self.axis_x_pos_11_status:
+            print('waiting for axis_x_pos_11_status')
+            time.sleep(1)
+        print('axis_x_pos_11_status:', self.axis_x_pos_11_status)
+        print('pos 11 cmd:', self.axis_x_pos_11_cmd(False))
+        
+    def axis_x_pos_12(self):
+        print('pos 12 cmd:', self.axis_x_pos_12_cmd(True))
+        while not self.axis_x_pos_12_status:
+            print('waiting for axis_x_pos_12_status')
+            time.sleep(1)
+        print('axis_x_pos_12_status:', self.axis_x_pos_12_status)
+        print('pos 12 cmd:', self.axis_x_pos_12_cmd(False))
+        
+    def axis_x_pos_13(self):
+        print('pos 13 cmd:', self.axis_x_pos_13_cmd(True))
+        while not self.axis_x_pos_13_status:
+            print('waiting for axis_x_pos_13_status')
+            time.sleep(1)
+        print('axis_x_pos_13_status:', self.axis_x_pos_13_status)
+        print('pos 13 cmd:', self.axis_x_pos_13_cmd(False))
+        
+    def axis_x_pos_14(self):
+        print('pos 14 cmd:', self.axis_x_pos_14_cmd(True))
+        while not self.axis_x_pos_14_status:
+            print('waiting for axis_x_pos_14_status')
+            time.sleep(1)
+        print('axis_x_pos_14_status:', self.axis_x_pos_14_status)
+        print('pos 14 cmd:', self.axis_x_pos_14_cmd(False))
 
     def axis_y_pos_2(self):
         print('pos 2 cmd:', self.axis_y_pos_2_cmd(True))
@@ -1398,6 +1633,34 @@ class Inovance_Three_Axis:
             time.sleep(1)
         print('axis_y_pos_10_status:', self.axis_y_pos_10_status)
         print('pos 10 cmd:', self.axis_y_pos_10_cmd(False))
+    def axis_y_pos_11(self):
+        print('pos 11 cmd:', self.axis_y_pos_11_cmd(True))
+        while not self.axis_y_pos_11_status:
+            print('waiting for axis_y_pos_11_status')
+            time.sleep(1)
+        print('axis_y_pos_11_status:', self.axis_y_pos_11_status)
+        print('pos 11 cmd:', self.axis_y_pos_11_cmd(False))
+    def axis_y_pos_12(self):
+        print('pos 12 cmd:', self.axis_y_pos_12_cmd(True))
+        while not self.axis_y_pos_12_status:
+            print('waiting for axis_y_pos_12_status')
+            time.sleep(1)
+        print('axis_y_pos_12_status:', self.axis_y_pos_12_status)
+        print('pos 12 cmd:', self.axis_y_pos_12_cmd(False))
+    def axis_y_pos_13(self):
+        print('pos 13 cmd:', self.axis_y_pos_13_cmd(True))
+        while not self.axis_y_pos_13_status:
+            print('waiting for axis_y_pos_13_status')
+            time.sleep(1)
+        print('axis_y_pos_13_status:', self.axis_y_pos_13_status)
+        print('pos 13 cmd:', self.axis_y_pos_13_cmd(False))
+    def axis_y_pos_14(self):
+        print('pos 14 cmd:', self.axis_y_pos_14_cmd(True))
+        while not self.axis_y_pos_14_status:
+            print('waiting for axis_y_pos_14_status')
+            time.sleep(1)
+        print('axis_y_pos_14_status:', self.axis_y_pos_14_status)
+        print('pos 14 cmd:', self.axis_y_pos_14_cmd(False))
 
     def axis_z_pos_2(self):
         print('pos 2 cmd:', self.axis_z_pos_2_cmd(True))
@@ -1470,6 +1733,38 @@ class Inovance_Three_Axis:
         print('axis_z_pos_10_status:', self.axis_z_pos_10_status)
         print('pos 10 cmd:', self.axis_z_pos_10_cmd(False))
 
+    def axis_z_pos_11(self):
+        print('pos 11 cmd:', self.axis_z_pos_11_cmd(True))
+        while not self.axis_z_pos_11_status:
+            print('waiting for axis_z_pos_11_status')
+            time.sleep(1)
+        print('axis_z_pos_11_status:', self.axis_z_pos_11_status)
+        print('pos 11 cmd:', self.axis_z_pos_11_cmd(False))
+    
+    def axis_z_pos_12(self):
+        print('pos 12 cmd:', self.axis_z_pos_12_cmd(True))
+        while not self.axis_z_pos_12_status:
+            print('waiting for axis_z_pos_12_status')
+            time.sleep(1)
+        print('axis_z_pos_12_status:', self.axis_z_pos_12_status)
+        print('pos 12 cmd:', self.axis_z_pos_12_cmd(False))
+        
+    def axis_z_pos_13(self):
+        print('pos 13 cmd:', self.axis_z_pos_13_cmd(True))
+        while not self.axis_z_pos_13_status:
+            print('waiting for axis_z_pos_13_status')
+            time.sleep(1)
+        print('axis_z_pos_13_status:', self.axis_z_pos_13_status)
+        print('pos 13 cmd:', self.axis_z_pos_13_cmd(False))
+    
+    def axis_z_pos_14(self):
+        print('pos 14 cmd:', self.axis_z_pos_14_cmd(True))
+        while not self.axis_z_pos_14_status:
+            print('waiting for axis_z_pos_14_status')
+            time.sleep(1)
+        print('axis_z_pos_14_status:', self.axis_z_pos_14_status)
+        print('pos 14 cmd:', self.axis_z_pos_14_cmd(False))
+    
     def axis_x_home_pos(self):
         print('home pos cmd:', self.axis_x_home_pos_cmd(True))
         while not self.axis_x_home_pos_status:

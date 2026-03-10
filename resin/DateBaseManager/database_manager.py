@@ -3,7 +3,7 @@ import datetime
 import os
 
 # 数据库文件路径，使用绝对路径
-db_path = os.path.join('E:\\AI_PJDataBase', 'process_db.db')
+db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'process_db.db')
 
 def init_database():
     """初始化数据库连接和表结构"""

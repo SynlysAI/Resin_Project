@@ -19,6 +19,10 @@ class AxisPosition(IntEnum):
     Adder_3 = 7
     Adder_4 = 8
     Adder_5 = 9
+    Reactor_5 = 10
+    Reactor_6 = 11
+    Reactor_7 = 12
+    Reactor_8 = 13
 
 
 def Axis_Power_on(deviceManager:DeviceManager):
@@ -150,6 +154,26 @@ def Axis_Move(deviceManager:DeviceManager,position:AxisPosition):
             three_axis.axis_x_pos_10()
             three_axis.axis_y_pos_10()
             three_axis.axis_z_pos_10()
+        elif position == AxisPosition.Reactor_5:
+            three_axis.axis_z_home_pos()
+            three_axis.axis_x_pos_11()
+            three_axis.axis_y_pos_11()
+            three_axis.axis_z_pos_11()
+        elif position == AxisPosition.Reactor_6:
+            three_axis.axis_z_home_pos()
+            three_axis.axis_x_pos_12()
+            three_axis.axis_y_pos_12()
+            three_axis.axis_z_pos_12()
+        elif position == AxisPosition.Reactor_7:
+            three_axis.axis_z_home_pos()
+            three_axis.axis_x_pos_13()
+            three_axis.axis_y_pos_13()
+            three_axis.axis_z_pos_13()
+        elif position == AxisPosition.Reactor_8:
+            three_axis.axis_z_home_pos()
+            three_axis.axis_x_pos_14()
+            three_axis.axis_y_pos_14()
+            three_axis.axis_z_pos_14()
         else:
             print("位置参数错误")
 

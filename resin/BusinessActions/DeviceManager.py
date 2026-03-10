@@ -33,6 +33,9 @@ class DeviceManager:
         # IO控制实例
         self.io_control = None
         self.io_control_fixpump = None
+        
+        # 仿真模式输出变量
+        self.simulation_mode = False
 
         
 
@@ -234,6 +237,12 @@ class DeviceManager:
         """停止参数监控线程"""
         if hasattr(self, 'parameter_monitor_thread'):
             self.parameter_monitor_thread.stop()
+    
+    def toggle_simulation_mode(self):
+        """切换仿真模式状态"""
+        self.simulation_mode = not self.simulation_mode
+        print(f"仿真模式已{'开启' if self.simulation_mode else '关闭'}")
+        return self.simulation_mode
 
 
 class ParameterMonitorThread(QThread):

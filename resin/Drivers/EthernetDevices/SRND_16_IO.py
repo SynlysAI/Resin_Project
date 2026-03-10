@@ -75,7 +75,7 @@ class SRND_16_IO(ModbusRtuOverTcpClientDevice):
 
 if __name__ == '__main__':
     srnd = SRND_16_IO(address="192.168.1.9:25", slave_id=1, device_name="test")
-    test_number= 0
+    test_number= 8
     # srnd.write_io_coil(13, False)
     # print("False")
     # time.sleep(1)

@@ -159,8 +159,9 @@ class FixPump:
         # self.serial_port.ser.write(packet)
         # recv = self.serial_port.ser.read(8)
         # print('接收设置注射量响应:', recv.hex(' ').upper())
+        time.sleep(5)
         pos=0
-        while pos!=volume_value:
+        while pos!=volume_value and pos!=volume_value-1:
             time.sleep(1)
             pos = self.query_position()
             print(f'当前位置: {pos}, 目标位置: {volume_value}')
@@ -178,8 +179,9 @@ class FixPump:
         # self.serial_port.ser.write(packet)
         # recv = self.serial_port.ser.read(8)
         # print('接收设置注射量响应:', recv.hex(' ').upper())
+        time.sleep(5)
         pos=0
-        while pos!=rotations:
+        while pos!=rotations and pos!=rotations-1:
             time.sleep(1)
             pos = self.query_position()
             print(f'当前位置: {pos}圈, 目标位置: {rotations}圈')

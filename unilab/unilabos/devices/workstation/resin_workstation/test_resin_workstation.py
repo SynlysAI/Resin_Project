@@ -23,7 +23,7 @@ class TestResinWorkstation(unittest.TestCase):
         设置测试环境
         """
         self.address = "127.0.0.1"
-        self.port = 9999
+        self.port = 8888
         
         # 创建 ResinWorkstation 实例
         self.workstation = ResinWorkstation(
