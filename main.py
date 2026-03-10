@@ -78,10 +78,10 @@ if __name__ == "__main__":
         def send_response(message=None):
             if message is None:
                 # 如果没有提供消息，发送默认响应
-                return send_udp_response("10.168.1.82", udp_receiver2.back_port, {"status": "success"})
+                return send_udp_response("127.0.0.1", udp_receiver2.back_port, {"status": "success"})
             else:
                 # 如果提供了消息，直接发送该消息
-                return send_udp_response("10.168.1.82", udp_receiver2.back_port, message)
+                return send_udp_response("127.0.0.1", udp_receiver2.back_port, message)
         return send_response
     
     # 获取预先设定了参数的闭包函数

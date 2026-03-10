@@ -40,11 +40,19 @@ def Motor_Bottom_stop_stirrer(motor:Motor_Bottom):
     motor.stop()
 
 def Start_Reactor_Stirrer(device_manager:DeviceManager,reactor_id:int,speed:float):
+    # 检查是否在仿真模式下
+    if device_manager.simulation_mode:
+        print(f"仿真模式：执行反应器搅拌器启动 - 反应器: {reactor_id}, 速度: {speed} RPM")
+        return
     if device_manager.motorzmcs:
         motor = device_manager.motorzmcs[reactor_id-1]# 索引从0开始，reactor_id从1开始
         Motor_zmc_start_stirrer(motor,speed)
 
 def Stop_Reactor_Stirrer(device_manager:DeviceManager,reactor_id:int):
+    # 检查是否在仿真模式下
+    if device_manager.simulation_mode:
+        print(f"仿真模式：执行反应器搅拌器停止 - 反应器: {reactor_id}")
+        return
     if device_manager.motorzmcs:
         motor = device_manager.motorzmcs[reactor_id-1]# 索引从0开始，reactor_id从1开始
         Motor_zmc_stop_stirrer(motor)

@@ -80,6 +80,11 @@ def Solution_transfer_Post(deviceManager:DeviceManager,origin_bottle:Bottle,end_
     :param indraft_speed: 吸入速度，单位毫升每分钟，默认值为3.0ml/s
     :param module_number: 模块编号，默认值为1
     """
+    # 检查是否在仿真模式下
+    if deviceManager.simulation_mode:
+        print(f"仿真模式：执行后处理模块溶液转移 - 源瓶: {origin_bottle.name}, 目标瓶: {end_bottle.name}, 体积: {volume} ml, 模块: {module_number}")
+        return True
+    
     MAX_VOLUME = 25.0
     pump= deviceManager.pumps[module_number]
     switchvalve = deviceManager.switch_valves[module_number]
@@ -260,6 +265,18 @@ def Auto_CleanProgram(deviceManager:DeviceManager,module_number:int):
     自动清洁程序
     :param DeviceManager: 设备管理器实例
     """
+    # 检查是否在仿真模式下
+    if deviceManager.simulation_mode:
+        print(f"仿真模式：执行自动清洁程序 - 模块: {module_number}")
+        print("仿真模式：清洁过程将执行3轮，每轮包括：")
+        print("1. 良溶剂泵入反应瓶")
+        print("2. 启动搅拌器")
+        print("3. 良溶剂从反应瓶泵入沉降瓶")
+        print("4. 搅拌300秒")
+        print("5. 停止搅拌器")
+        print("6. 泵出清洁液300秒")
+        return
+    
     #先将自动化程序中的各个参数固定下来
     looptimes=3
     Clean_solution_volume=50
@@ -315,7 +332,7 @@ def FixPump_Inject(deviceManager:DeviceManager,solution_number:int,volume:float)
     :param solution_name: 溶液名称
     :param volume: 转移体积，单位毫升
     """
-    self.param_storage.is_system_busy = True
+    deviceManager.parameter_storage.is_system_busy = True
     #基础固定参数
     input_speed=100 #rpm
     volume_per_round = 0.1#每转注射量，单位ml
@@ -353,7 +370,7 @@ def FixPump_Inject(deviceManager:DeviceManager,solution_number:int,volume:float)
     time.sleep(2)
     print("通气完成，关闭通气阀门")
     gas_valve.close()
-    self.param_storage.is_system_busy = False
+    deviceManager.parameter_storage.is_system_busy = False
 
 def FixPump_reset(deviceManager:DeviceManager,solution_number:int):
     """
@@ -416,6 +433,11 @@ def Add_Solution_to_Reactor(deviceManager:DeviceManager,solution_number:int,volu
     :param solution_name: 溶液名称
     :param volume: 转移体积，单位毫升
     """
+    # 检查是否在仿真模式下
+    if deviceManager.simulation_mode:
+        print(f"仿真模式：执行前处理模块加液动作 - 溶液编号: {solution_number}, 体积: {volume} ml, 反应瓶: {reactor}")
+        return
+    
     #先确认加液模块的位置
     adder_position = None
 

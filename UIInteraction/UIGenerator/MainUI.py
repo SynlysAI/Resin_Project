@@ -468,7 +468,7 @@ class MainUI(QMainWindow):
                 mode_switch_layout.addWidget(self.btn_mode_switch)
                 layout.addLayout(mode_switch_layout)
                 
-                # 添加多步动作和待机位置按钮
+                # 添加多步动作、待机位置和仿真模式按钮
                 layout.addSpacing(20)  # 添加间距
                 action_buttons_layout = QHBoxLayout()
                 
@@ -482,10 +482,17 @@ class MainUI(QMainWindow):
                 self.btn_return_standby = QPushButton('回到待机位置')
                 self.btn_return_standby.setStyleSheet(button_style.replace("background-color: #f0f0f0;", "background-color: #3f51b5;").replace("border: 1px solid #c0c0c0;", "border: 1px solid #303f9f;").replace("QPushButton:hover {\n                        background-color: #e0e0e0;", "QPushButton:hover {\n                        background-color: #303f9f;").replace("QPushButton:pressed {\n                        background-color: #d0d0d0;", "QPushButton:pressed {\n                        background-color: #283593;"))
                 action_buttons_layout.addWidget(self.btn_return_standby)
+                action_buttons_layout.addSpacing(20)
+                
+                # 仿真模式按钮
+                self.btn_simulation_mode = QPushButton('仿真模式: 关闭')
+                self.btn_simulation_mode.setStyleSheet(button_style.replace("background-color: #f0f0f0;", "background-color: #ff9800;").replace("border: 1px solid #c0c0c0;", "border: 1px solid #f57c00;").replace("QPushButton:hover {\n                        background-color: #e0e0e0;", "QPushButton:hover {\n                        background-color: #f57c00;").replace("QPushButton:pressed {\n                        background-color: #d0d0d0;", "QPushButton:pressed {\n                        background-color: #ef6c00;"))
+                action_buttons_layout.addWidget(self.btn_simulation_mode)
                 
                 # 设置按钮大小
                 self.btn_test_multi_step.setMinimumWidth(150)
                 self.btn_return_standby.setMinimumWidth(150)
+                self.btn_simulation_mode.setMinimumWidth(150)
                 
                 # 将按钮布局添加到主布局
                 layout.addLayout(action_buttons_layout)

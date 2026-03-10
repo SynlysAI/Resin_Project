@@ -20,6 +20,7 @@ class UDPSignalReceiver:
         self.udp_socket = None
         self.listen_thread = None
         self.is_running = False
+        self.back_port = 8889
         # 事件委托，初始化为None
         self.on_receive_signal = None
         
@@ -51,11 +52,18 @@ class UDPSignalReceiver:
                 data, sender_addr = self.udp_socket.recvfrom(1024)
                 decoded_data = data.decode('utf-8')
                 print(f"\n收到来自 {sender_addr} 的UDP消息：{decoded_data}")
-                
-                # 只有当接收到的消息是"OK"时才执行事件委托
-                if decoded_data == "OK" and self.on_receive_signal is not None:
+                # 提取发送方端口并更新 self.back_port
+                _, sender_port = sender_addr
+                self.back_port = sender_port
+                # 根据接收到的消息类型执行不同的事件委托调用方式
+                if self.on_receive_signal is not None:
                     try:
-                        self.on_receive_signal()  # 事件委托不再接收参数
+                        if decoded_data == "OK":
+                            # 如果收到的信息是"OK"，则直接执行事件委托（不带参数）
+                            self.on_receive_signal()
+                        else:
+                            # 如果收到的信息不是"OK"，则将收到的信息作为事件委托的参数传入
+                            self.on_receive_signal(decoded_data)
                     except Exception as e:
                         print(f"执行事件委托时发生错误：{e}")
         except Exception as e:
@@ -80,7 +88,9 @@ class UDPSignalReceiver:
         """
         设置UDP信号处理的事件委托
         
-        :param handler: 处理函数，不接收任何参数
+        :param handler: 处理函数，可以是两种形式：
+                       1. 不接收参数的函数（当接收到的消息是"OK"时调用）
+                       2. 接收一个参数的函数（当接收到的消息不是"OK"时调用，参数为接收到的消息字符串）
         """
         self.on_receive_signal = handler
 

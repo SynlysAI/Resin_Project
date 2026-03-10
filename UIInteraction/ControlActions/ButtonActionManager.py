@@ -248,6 +248,9 @@ class ButtonActionManager:
         # 测试界面 多步动作按钮绑定
         self.main_window.btn_test_multi_step.clicked.connect(lambda: Test_MultiStepAction_Bond(self.device_manager, self.ui_feedback))
         
+        # 仿真模式按钮绑定
+        self.main_window.btn_simulation_mode.clicked.connect(self.toggle_simulation_mode)
+        
         # 反应器气阀控制按钮绑定
         self.main_window.btn_valve_open_1.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 1))
         self.main_window.btn_valve_open_2.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 2))
@@ -581,5 +584,50 @@ class ButtonActionManager:
                 }
                 QPushButton:pressed {
                     background-color: #b71c1c;
+                }
+            """)
+    
+    def toggle_simulation_mode(self):
+        """
+        切换仿真模式状态
+        """
+        # 调用设备管理器的切换仿真模式方法
+        current_mode = self.device_manager.toggle_simulation_mode()
+        
+        # 更新按钮文本和样式
+        if current_mode:
+            self.main_window.btn_simulation_mode.setText('仿真模式: 开启')
+            self.main_window.btn_simulation_mode.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    color: white;
+                    font-size: 20px;
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                }
+                QPushButton:pressed {
+                    background-color: #3d8b40;
+                }
+            """)
+        else:
+            self.main_window.btn_simulation_mode.setText('仿真模式: 关闭')
+            self.main_window.btn_simulation_mode.setStyleSheet("""
+                QPushButton {
+                    background-color: #ff9800;
+                    color: white;
+                    font-size: 20px;
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #f57c00;
+                }
+                QPushButton:pressed {
+                    background-color: #ef6c00;
                 }
             """)
