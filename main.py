@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QApplication
 from UIInteraction.UIGenerator.MainUI import MainUI
+from Common.ActionLogger import get_action_logger
 from UIInteraction.ControlActions.InputActionManager import InputActionManager
 from BusinessActions.DeviceManager import DeviceManager
 from PySide6.QtWidgets import QApplication, QPushButton
@@ -42,6 +43,7 @@ def send_udp_response(host, port, message):
 if __name__ == "__main__":
     # 创建应用程序实例
     app = QApplication(sys.argv)
+    get_action_logger().record("应用启动")
     
     # 创建MainUI实例
     main_window = MainUI()
@@ -68,7 +70,11 @@ if __name__ == "__main__":
     # 建立udp监听
     udp_receiver = UDPSignalReceiver(host="127.0.0.1", port=8888)
     # 设置信号处理函数
-    udp_receiver.set_signal_handler(lambda message=None:Import_Process_UDP(main_window.table_process))
+    def on_udp_import_process(message=None):
+        get_action_logger().record("UDP：工艺流程导入触发")
+        Import_Process_UDP(main_window.table_process)
+
+    udp_receiver.set_signal_handler(on_udp_import_process)
     # 启动监听
     udp_receiver.start_listening()
     #建立第二个UDP监听线程
@@ -87,10 +93,26 @@ if __name__ == "__main__":
     # 获取预先设定了参数的闭包函数
     response_sender = create_response_sender()
     
-    # 设置信号处理函数，传递闭包函数作为参数
-    udp_receiver2.set_signal_handler(lambda message=None:Import_Parament_UDP(message, device_manager, response_sender))
+    def on_udp_param(message=None):
+        if message is not None:
+            msg = str(message)
+            if len(msg) > 200:
+                msg = msg[:200] + "..."
+            get_action_logger().record(f"UDP：参数下发 {msg}")
+        else:
+            get_action_logger().record("UDP：参数下发（OK）")
+        Import_Parament_UDP(message, device_manager, response_sender)
+
+    udp_receiver2.set_signal_handler(on_udp_param)
     # 启动监听
     udp_receiver2.start_listening()
+
+    def on_app_about_to_quit():
+        udp_receiver.stop_listening()
+        udp_receiver2.stop_listening()
+        get_action_logger().persist()
+
+    app.aboutToQuit.connect(on_app_about_to_quit)
 
     # 运行应用程序主循环
     sys.exit(app.exec())

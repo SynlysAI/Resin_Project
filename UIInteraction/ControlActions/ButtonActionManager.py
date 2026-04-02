@@ -11,6 +11,7 @@ from UIInteraction.ParameterManagement.ParameterStorage import ParameterStorage
 from BusinessActions.UIFeedback.UIFeedbackHandler import UIFeedbackHandler
 from ActionSequence.execute_sequence import *
 from BusinessActions.SingleStepActions.AxisSingleStepAction import *
+from Common.ActionLogger import get_action_logger
 
 class ProcessExecutionThread(QThread):
     """工艺执行线程类，用于异步执行工艺流程"""
@@ -86,6 +87,12 @@ class ProcessExecutionThread(QThread):
             self.status.emit(f"执行第 {idx}/{len(sequence)} 个命令：{func.__name__}")
             
             try:
+                args_repr = str(args)
+                if len(args_repr) > 200:
+                    args_repr = args_repr[:200] + "..."
+                get_action_logger().record(
+                    f"工艺流程步骤 {idx}/{len(sequence)}: {func.__name__} 参数: {args_repr}"
+                )
                 func(*args)
             except Exception as e:
                 self.error.emit(f"第 {idx} 个命令执行失败：{str(e)}")
@@ -109,59 +116,115 @@ class ButtonActionManager:
         self.param_storage=param_storage
         self.ui_feedback=ui_feedback
         self.setup_button_connections()
+
+    def _logged_call(self, description: str, fn, *args, **kwargs):
+        get_action_logger().record(description)
+        return fn(*args, **kwargs)
+
+    def _logged_run(self, description: str, fn):
+        get_action_logger().record(description)
+        return fn()
     
     def setup_button_connections(self):
         """
         设置所有按钮的信号槽连接
         """
         # 连接刷新串口按钮的点击信号
-        self.main_window.btn_refresh_port.clicked.connect(lambda: self.refresh_serial_ports(self.main_window.combo_port))
-        self.main_window.btn_refresh_port_post.clicked.connect(lambda: self.refresh_serial_ports(self.main_window.combo_port_post))
+        self.main_window.btn_refresh_port.clicked.connect(
+            lambda: self._logged_call("刷新反应器串口列表", self.refresh_serial_ports, self.main_window.combo_port)
+        )
+        self.main_window.btn_refresh_port_post.clicked.connect(
+            lambda: self._logged_call("刷新后处理串口列表", self.refresh_serial_ports, self.main_window.combo_port_post)
+        )
         
         # 连接控制模式切换按钮的点击信号
-        self.main_window.btn_mode_switch.clicked.connect(self.toggle_control_mode)
+        self.main_window.btn_mode_switch.clicked.connect(
+            lambda: self._logged_run("切换本地/远程控制模式", self.toggle_control_mode)
+        )
        
         
-        self.main_window.btn_connect.clicked.connect(self.device_manager.connnect_reactor_moudle)
-        self.main_window.btn_connect_post.clicked.connect(self.device_manager.connect_post_module)
-        self.main_window.btn_disconnect.clicked.connect(self.device_manager.disconnect_all_reactor_devices)
-        self.main_window.btn_disconnect_post.clicked.connect(self.device_manager.disconnect_all_post_devices)
-        self.main_window.btn_start_motor.clicked.connect(lambda :Motor_zmc_start_stirrer(self.device_manager.current_motorzmc,self.param_storage.set_motor_speed))
-        self.main_window.btn_stop_motor.clicked.connect(lambda :Motor_zmc_stop_stirrer(self.device_manager.current_motorzmc))
-        self.main_window.btn_start_bottom_motor.clicked.connect(lambda :Motor_Bottom_start_stirrer(self.device_manager.current_motor485_bottom))
-        self.main_window.btn_stop_bottom_motor.clicked.connect(lambda :Motor_Bottom_stop_stirrer(self.device_manager.current_motor485_bottom))
+        self.main_window.btn_connect.clicked.connect(
+            lambda: self._logged_run("反应器模块连接", self.device_manager.connnect_reactor_moudle)
+        )
+        self.main_window.btn_connect_post.clicked.connect(
+            lambda: self._logged_run("后处理模块连接", self.device_manager.connect_post_module)
+        )
+        self.main_window.btn_disconnect.clicked.connect(
+            lambda: self._logged_run("反应器模块断开", self.device_manager.disconnect_all_reactor_devices)
+        )
+        self.main_window.btn_disconnect_post.clicked.connect(
+            lambda: self._logged_run("后处理模块断开", self.device_manager.disconnect_all_post_devices)
+        )
+        self.main_window.btn_start_motor.clicked.connect(
+            lambda: self._logged_call("反应器搅拌启动", Motor_zmc_start_stirrer, self.device_manager.current_motorzmc, self.param_storage.set_motor_speed)
+        )
+        self.main_window.btn_stop_motor.clicked.connect(
+            lambda: self._logged_call("反应器搅拌停止", Motor_zmc_stop_stirrer, self.device_manager.current_motorzmc)
+        )
+        self.main_window.btn_start_bottom_motor.clicked.connect(
+            lambda: self._logged_call("底部485电机启动", Motor_Bottom_start_stirrer, self.device_manager.current_motor485_bottom)
+        )
+        self.main_window.btn_stop_bottom_motor.clicked.connect(
+            lambda: self._logged_call("底部485电机停止", Motor_Bottom_stop_stirrer, self.device_manager.current_motor485_bottom)
+        )
 
-        self.main_window.btn_temp_set.clicked.connect(lambda :TemperatureControl_set_temperature(self.device_manager.current_temp_sensor,self.param_storage.set_temperature))
-        self.main_window.btn_start_motor_post.clicked.connect(lambda :Motor_485_idm42_start_stirrer(self.device_manager.current_motor485,self.param_storage.set_motor_speed_post))
-        self.main_window.btn_stop_motor_post.clicked.connect(lambda :Motor_485_idm42_stop_stirrer(self.device_manager.current_motor485))
-        self.main_window.btn_gas_valve.clicked.connect(lambda :Valve_change_state(self.device_manager.current_gas_valve))
-        self.main_window.btn_discharge_valve.clicked.connect(lambda :Valve_change_state(self.device_manager.current_discharge_valve))
-        self.main_window.btn_liquid_return_valve.clicked.connect(lambda :Valve_change_state(self.device_manager.current_liquid_return_valve))
-        self.main_window.btn_water_valve.clicked.connect(lambda :Valve_change_state(self.device_manager.current_water_valve))
+        self.main_window.btn_temp_set.clicked.connect(
+            lambda: self._logged_call("反应器温度设定", TemperatureControl_set_temperature, self.device_manager.current_temp_sensor, self.param_storage.set_temperature)
+        )
+        self.main_window.btn_start_motor_post.clicked.connect(
+            lambda: self._logged_call("后处理搅拌启动", Motor_485_idm42_start_stirrer, self.device_manager.current_motor485, self.param_storage.set_motor_speed_post)
+        )
+        self.main_window.btn_stop_motor_post.clicked.connect(
+            lambda: self._logged_call("后处理搅拌停止", Motor_485_idm42_stop_stirrer, self.device_manager.current_motor485)
+        )
+        self.main_window.btn_gas_valve.clicked.connect(
+            lambda: self._logged_call("后处理气阀切换", Valve_change_state, self.device_manager.current_gas_valve)
+        )
+        self.main_window.btn_discharge_valve.clicked.connect(
+            lambda: self._logged_call("后处理排液阀切换", Valve_change_state, self.device_manager.current_discharge_valve)
+        )
+        self.main_window.btn_liquid_return_valve.clicked.connect(
+            lambda: self._logged_call("后处理回液阀切换", Valve_change_state, self.device_manager.current_liquid_return_valve)
+        )
+        self.main_window.btn_water_valve.clicked.connect(
+            lambda: self._logged_call("后处理水阀切换", Valve_change_state, self.device_manager.current_water_valve)
+        )
         #反应器添加溶液部分按钮连接
         self.main_window.btn_add_solution_a.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_add_solution_a,"blue")
         )
         self.main_window.btn_add_solution_a.clicked.connect(
-            lambda: Add_Solution_to_Reactor_Bond(self.device_manager,self.ui_feedback,1,self.param_storage.set_dosage_a,self.param_storage.reactor.number)
+            lambda: self._logged_call(
+                "反应器加液：溶液A", Add_Solution_to_Reactor_Bond,
+                self.device_manager, self.ui_feedback, 1, self.param_storage.set_dosage_a, self.param_storage.reactor.number
+            )
         )
         self.main_window.btn_add_solution_b.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_add_solution_b, "blue")
         )
         self.main_window.btn_add_solution_b.clicked.connect(
-            lambda: Add_Solution_to_Reactor_Bond(self.device_manager,self.ui_feedback,2,self.param_storage.set_dosage_b,self.param_storage.reactor.number)
+            lambda: self._logged_call(
+                "反应器加液：溶液B", Add_Solution_to_Reactor_Bond,
+                self.device_manager, self.ui_feedback, 2, self.param_storage.set_dosage_b, self.param_storage.reactor.number
+            )
         )
         self.main_window.btn_add_solution_c.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_add_solution_c, "blue")
         )
         self.main_window.btn_add_solution_c.clicked.connect(
-            lambda: Add_Solution_to_Reactor_Bond(self.device_manager,self.ui_feedback,3,self.param_storage.set_dosage_c,self.param_storage.reactor.number)
+            lambda: self._logged_call(
+                "反应器加液：溶液C", Add_Solution_to_Reactor_Bond,
+                self.device_manager, self.ui_feedback, 3, self.param_storage.set_dosage_c, self.param_storage.reactor.number
+            )
         )
         self.main_window.btn_add_solution_d.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_add_solution_d, "blue")
         )
         self.main_window.btn_add_solution_d.clicked.connect(
-            lambda: Add_Solution_to_Reactor_Bond(self.device_manager,self.ui_feedback,4,self.param_storage.set_dosage_d,self.param_storage.reactor.number)
+            lambda: self._logged_call(
+                "反应器加液：溶液D", Add_Solution_to_Reactor_Bond,
+                self.device_manager, self.ui_feedback, 4, self.param_storage.set_dosage_d, self.param_storage.reactor.number
+            )
         )
 
         #后处理部分添加溶液按钮连接
@@ -169,106 +232,222 @@ class ButtonActionManager:
             lambda: self.set_button_color(self.main_window.btn_inject_solution_a,"blue")
         )
         self.main_window.btn_inject_solution_a.clicked.connect(
-            lambda: Add_reactsolution_Post(self.device_manager,self.ui_feedback,self.param_storage.set_dosage_inject_a,self.param_storage.set_post_inject_speed_a,self.param_storage.posttreatmentmodule.number)
+            lambda: self._logged_call(
+                "后处理注入：反应液", Add_reactsolution_Post,
+                self.device_manager, self.ui_feedback, self.param_storage.set_dosage_inject_a, self.param_storage.set_post_inject_speed_a, self.param_storage.posttreatmentmodule.number
+            )
         )
         self.main_window.btn_inject_solution_b.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_inject_solution_b, "blue")
         )
         self.main_window.btn_inject_solution_b.clicked.connect(
-            lambda: Add_goodsolution_Post(self.device_manager,self.ui_feedback,self.param_storage.set_dosage_inject_b,self.param_storage.set_post_inject_speed_b,self.param_storage.posttreatmentmodule.number)
+            lambda: self._logged_call(
+                "后处理注入：良溶剂", Add_goodsolution_Post,
+                self.device_manager, self.ui_feedback, self.param_storage.set_dosage_inject_b, self.param_storage.set_post_inject_speed_b, self.param_storage.posttreatmentmodule.number
+            )
         )
         
         self.main_window.btn_inject_solution_c.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_inject_solution_c, "blue")
         )       
         self.main_window.btn_inject_solution_c.clicked.connect(
-            lambda: Add_badsolution_Post(self.device_manager,self.ui_feedback,self.param_storage.set_dosage_inject_c,self.param_storage.set_post_inject_speed_c,self.param_storage.posttreatmentmodule.number)
+            lambda: self._logged_call(
+                "后处理注入：不良溶剂", Add_badsolution_Post,
+                self.device_manager, self.ui_feedback, self.param_storage.set_dosage_inject_c, self.param_storage.set_post_inject_speed_c, self.param_storage.posttreatmentmodule.number
+            )
         )
         self.main_window.btn_clean_step_a.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_clean_step_a, "blue")
         )
         self.main_window.btn_clean_step_a.clicked.connect(
-            lambda: Clean_Step_A_Post(self.device_manager,self.ui_feedback,self.param_storage.set_dosage_clean_a,self.param_storage.set_post_inject_speed_clean_a,self.param_storage.posttreatmentmodule.number)
+            lambda: self._logged_call(
+                "后处理清洁步骤A", Clean_Step_A_Post,
+                self.device_manager, self.ui_feedback, self.param_storage.set_dosage_clean_a, self.param_storage.set_post_inject_speed_clean_a, self.param_storage.posttreatmentmodule.number
+            )
         )
         self.main_window.btn_clean_step_b.clicked.connect(
             lambda: self.set_button_color(self.main_window.btn_clean_step_b, "blue")
         )
         self.main_window.btn_clean_step_b.clicked.connect(
-            lambda: Clean_Step_B_Post(self.device_manager,self.ui_feedback,self.param_storage.set_dosage_clean_b,self.param_storage.set_post_inject_speed_clean_b,self.param_storage.posttreatmentmodule.number)
+            lambda: self._logged_call(
+                "后处理清洁步骤B", Clean_Step_B_Post,
+                self.device_manager, self.ui_feedback, self.param_storage.set_dosage_clean_b, self.param_storage.set_post_inject_speed_clean_b, self.param_storage.posttreatmentmodule.number
+            )
         )
         #自动流程按钮绑定
-        self.main_window.btn_settle_module1.clicked.connect(lambda: Auto_SettleProgram_Bond(self.device_manager,self.ui_feedback,0))
-        self.main_window.btn_clean_module1.clicked.connect(lambda: Auto_CleanProgram_Bond(self.device_manager,self.ui_feedback,0))
-        self.main_window.btn_settle_module2.clicked.connect(lambda: Auto_SettleProgram_Bond(self.device_manager,self.ui_feedback,1))
-        self.main_window.btn_clean_module2.clicked.connect(lambda: Auto_CleanProgram_Bond(self.device_manager,self.ui_feedback,1))
-        self.main_window.btn_settle_module3.clicked.connect(lambda: Auto_SettleProgram_Bond(self.device_manager,self.ui_feedback,2))
-        self.main_window.btn_clean_module3.clicked.connect(lambda: Auto_CleanProgram_Bond(self.device_manager,self.ui_feedback,2))
-        self.main_window.btn_settle_module4.clicked.connect(lambda: Auto_SettleProgram_Bond(self.device_manager,self.ui_feedback,3))
-        self.main_window.btn_clean_module4.clicked.connect(lambda: Auto_CleanProgram_Bond(self.device_manager,self.ui_feedback,3))
+        self.main_window.btn_settle_module1.clicked.connect(
+            lambda: self._logged_call("自动化：模块1沉降程序", Auto_SettleProgram_Bond, self.device_manager, self.ui_feedback, 0)
+        )
+        self.main_window.btn_clean_module1.clicked.connect(
+            lambda: self._logged_call("自动化：模块1清洁程序", Auto_CleanProgram_Bond, self.device_manager, self.ui_feedback, 0)
+        )
+        self.main_window.btn_settle_module2.clicked.connect(
+            lambda: self._logged_call("自动化：模块2沉降程序", Auto_SettleProgram_Bond, self.device_manager, self.ui_feedback, 1)
+        )
+        self.main_window.btn_clean_module2.clicked.connect(
+            lambda: self._logged_call("自动化：模块2清洁程序", Auto_CleanProgram_Bond, self.device_manager, self.ui_feedback, 1)
+        )
+        self.main_window.btn_settle_module3.clicked.connect(
+            lambda: self._logged_call("自动化：模块3沉降程序", Auto_SettleProgram_Bond, self.device_manager, self.ui_feedback, 2)
+        )
+        self.main_window.btn_clean_module3.clicked.connect(
+            lambda: self._logged_call("自动化：模块3清洁程序", Auto_CleanProgram_Bond, self.device_manager, self.ui_feedback, 2)
+        )
+        self.main_window.btn_settle_module4.clicked.connect(
+            lambda: self._logged_call("自动化：模块4沉降程序", Auto_SettleProgram_Bond, self.device_manager, self.ui_feedback, 3)
+        )
+        self.main_window.btn_clean_module4.clicked.connect(
+            lambda: self._logged_call("自动化：模块4清洁程序", Auto_CleanProgram_Bond, self.device_manager, self.ui_feedback, 3)
+        )
 
         self.process_execution_thread = None
         
         #工艺流程导入按钮绑定
-        self.main_window.btn_import_process.clicked.connect(lambda: Import_Process_Bond(self.main_window.table_process))
+        self.main_window.btn_import_process.clicked.connect(
+            lambda: self._logged_call("工艺流程：从文件导入", Import_Process_Bond, self.main_window.table_process)
+        )
         
         #工艺流程执行按钮绑定 - 使用异步执行
         self.main_window.btn_execute_process.clicked.connect(self.execute_process_async)
 
         #测试按钮绑定
         # 抓取加液头按钮绑定
-        self.main_window.btn_grab_a.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Adder_1))
-        self.main_window.btn_grab_b.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Adder_2))
-        self.main_window.btn_grab_c.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Adder_3))
-        self.main_window.btn_grab_d.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Adder_4))
-        self.main_window.btn_grab_e.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Adder_5))
+        self.main_window.btn_grab_a.clicked.connect(
+            lambda: self._logged_call("三轴：移动至加液头A", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Adder_1)
+        )
+        self.main_window.btn_grab_b.clicked.connect(
+            lambda: self._logged_call("三轴：移动至加液头B", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Adder_2)
+        )
+        self.main_window.btn_grab_c.clicked.connect(
+            lambda: self._logged_call("三轴：移动至加液头C", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Adder_3)
+        )
+        self.main_window.btn_grab_d.clicked.connect(
+            lambda: self._logged_call("三轴：移动至加液头D", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Adder_4)
+        )
+        self.main_window.btn_grab_e.clicked.connect(
+            lambda: self._logged_call("三轴：移动至加液头E", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Adder_5)
+        )
         
         # 反应器点位按钮绑定
-        self.main_window.btn_reactor_1.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_1))
-        self.main_window.btn_reactor_2.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_2))
-        self.main_window.btn_reactor_3.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_3))
-        self.main_window.btn_reactor_4.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_4))
-        self.main_window.btn_reactor_5.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_5))
-        self.main_window.btn_reactor_6.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_6))
-        self.main_window.btn_reactor_7.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_7))
-        self.main_window.btn_reactor_8.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.Reactor_8))
+        self.main_window.btn_reactor_1.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器1", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_1)
+        )
+        self.main_window.btn_reactor_2.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器2", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_2)
+        )
+        self.main_window.btn_reactor_3.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器3", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_3)
+        )
+        self.main_window.btn_reactor_4.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器4", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_4)
+        )
+        self.main_window.btn_reactor_5.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器5", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_5)
+        )
+        self.main_window.btn_reactor_6.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器6", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_6)
+        )
+        self.main_window.btn_reactor_7.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器7", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_7)
+        )
+        self.main_window.btn_reactor_8.clicked.connect(
+            lambda: self._logged_call("三轴：移动至反应器8", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.Reactor_8)
+        )
         # 待机位置点位按钮绑定
-        self.main_window.btn_return_standby.clicked.connect(lambda: Axis_Move_In_Thread(self.device_manager, self.ui_feedback, AxisPosition.HOME))
+        self.main_window.btn_return_standby.clicked.connect(
+            lambda: self._logged_call("三轴：返回待机位", Axis_Move_In_Thread, self.device_manager, self.ui_feedback, AxisPosition.HOME)
+        )
         # 夹爪控制按钮绑定
-        self.main_window.btn_init_claw.clicked.connect(lambda: Gripper_init_In_Thread(self.device_manager, self.ui_feedback))
-        self.main_window.btn_grip_claw.clicked.connect(lambda: Gripper_on_In_Thread(self.device_manager, self.ui_feedback))
-        self.main_window.btn_release_claw.clicked.connect(lambda: Gripper_off_In_Thread(self.device_manager, self.ui_feedback))
+        self.main_window.btn_init_claw.clicked.connect(
+            lambda: self._logged_call("夹爪：初始化", Gripper_init_In_Thread, self.device_manager, self.ui_feedback)
+        )
+        self.main_window.btn_grip_claw.clicked.connect(
+            lambda: self._logged_call("夹爪：夹紧", Gripper_on_In_Thread, self.device_manager, self.ui_feedback)
+        )
+        self.main_window.btn_release_claw.clicked.connect(
+            lambda: self._logged_call("夹爪：松开", Gripper_off_In_Thread, self.device_manager, self.ui_feedback)
+        )
         
         # 轴控制按钮绑定
-        self.main_window.btn_axis_power_on.clicked.connect(lambda: Axis_Power_on(self.device_manager))
-        self.main_window.btn_axis_home.clicked.connect(lambda: Axis_Origin_In_Thread(self.device_manager, self.ui_feedback))
-        self.main_window.btn_axis_reset.clicked.connect(lambda: Axis_Reset(self.device_manager))
+        self.main_window.btn_axis_power_on.clicked.connect(
+            lambda: self._logged_call("三轴：上电", Axis_Power_on, self.device_manager)
+        )
+        self.main_window.btn_axis_home.clicked.connect(
+            lambda: self._logged_call("三轴：回原点", Axis_Origin_In_Thread, self.device_manager, self.ui_feedback)
+        )
+        self.main_window.btn_axis_reset.clicked.connect(
+            lambda: self._logged_call("三轴：复位", Axis_Reset, self.device_manager)
+        )
         # 测试用泵按钮绑定
-        self.main_window.btn_add_liquid.clicked.connect(lambda: FixPump_Inject_In_Thread(self.device_manager, self.ui_feedback, self.param_storage.select_test_head, self.param_storage.set_test_dosage))
-        self.main_window.btn_reset_pump.clicked.connect(lambda: FixPump_reset(self.device_manager, self.param_storage.select_test_head))
+        self.main_window.btn_add_liquid.clicked.connect(
+            lambda: self._logged_call(
+                "测试：定量泵加液", FixPump_Inject_In_Thread,
+                self.device_manager, self.ui_feedback, self.param_storage.select_test_head, self.param_storage.set_test_dosage
+            )
+        )
+        self.main_window.btn_reset_pump.clicked.connect(
+            lambda: self._logged_call("测试：定量泵复位", FixPump_reset, self.device_manager, self.param_storage.select_test_head)
+        )
         # 测试界面 多步动作按钮绑定
-        self.main_window.btn_test_multi_step.clicked.connect(lambda: Test_MultiStepAction_Bond(self.device_manager, self.ui_feedback))
+        self.main_window.btn_test_multi_step.clicked.connect(
+            lambda: self._logged_call("测试：多步动作", Test_MultiStepAction_Bond, self.device_manager, self.ui_feedback)
+        )
         
         # 仿真模式按钮绑定
-        self.main_window.btn_simulation_mode.clicked.connect(self.toggle_simulation_mode)
+        self.main_window.btn_simulation_mode.clicked.connect(
+            lambda: self._logged_run("切换仿真模式", self.toggle_simulation_mode)
+        )
         
         # 反应器气阀控制按钮绑定
-        self.main_window.btn_valve_open_1.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 1))
-        self.main_window.btn_valve_open_2.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 2))
-        self.main_window.btn_valve_open_3.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 3))
-        self.main_window.btn_valve_open_4.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 4))
-        self.main_window.btn_valve_open_5.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 5))
-        self.main_window.btn_valve_open_6.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 6))
-        self.main_window.btn_valve_open_7.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 7))
-        self.main_window.btn_valve_open_8.clicked.connect(lambda: Reactor_N2_on(self.device_manager, 8))
+        self.main_window.btn_valve_open_1.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块1开启", Reactor_N2_on, self.device_manager, 1)
+        )
+        self.main_window.btn_valve_open_2.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块2开启", Reactor_N2_on, self.device_manager, 2)
+        )
+        self.main_window.btn_valve_open_3.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块3开启", Reactor_N2_on, self.device_manager, 3)
+        )
+        self.main_window.btn_valve_open_4.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块4开启", Reactor_N2_on, self.device_manager, 4)
+        )
+        self.main_window.btn_valve_open_5.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块5开启", Reactor_N2_on, self.device_manager, 5)
+        )
+        self.main_window.btn_valve_open_6.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块6开启", Reactor_N2_on, self.device_manager, 6)
+        )
+        self.main_window.btn_valve_open_7.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块7开启", Reactor_N2_on, self.device_manager, 7)
+        )
+        self.main_window.btn_valve_open_8.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块8开启", Reactor_N2_on, self.device_manager, 8)
+        )
         
-        self.main_window.btn_valve_close_1.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 1))
-        self.main_window.btn_valve_close_2.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 2))
-        self.main_window.btn_valve_close_3.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 3))
-        self.main_window.btn_valve_close_4.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 4))
-        self.main_window.btn_valve_close_5.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 5))
-        self.main_window.btn_valve_close_6.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 6))
-        self.main_window.btn_valve_close_7.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 7))
-        self.main_window.btn_valve_close_8.clicked.connect(lambda: Reactor_N2_off(self.device_manager, 8))
+        self.main_window.btn_valve_close_1.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块1关闭", Reactor_N2_off, self.device_manager, 1)
+        )
+        self.main_window.btn_valve_close_2.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块2关闭", Reactor_N2_off, self.device_manager, 2)
+        )
+        self.main_window.btn_valve_close_3.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块3关闭", Reactor_N2_off, self.device_manager, 3)
+        )
+        self.main_window.btn_valve_close_4.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块4关闭", Reactor_N2_off, self.device_manager, 4)
+        )
+        self.main_window.btn_valve_close_5.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块5关闭", Reactor_N2_off, self.device_manager, 5)
+        )
+        self.main_window.btn_valve_close_6.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块6关闭", Reactor_N2_off, self.device_manager, 6)
+        )
+        self.main_window.btn_valve_close_7.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块7关闭", Reactor_N2_off, self.device_manager, 7)
+        )
+        self.main_window.btn_valve_close_8.clicked.connect(
+            lambda: self._logged_call("反应器N2通：模块8关闭", Reactor_N2_off, self.device_manager, 8)
+        )
         # 为测试界面所有按钮（除了加液和复位）添加点击变蓝色的绑定
         test_buttons = [
             # 抓取加液头按钮
@@ -381,6 +560,7 @@ class ButtonActionManager:
         self.process_execution_thread.finished.connect(self._on_execution_finished)
         self.process_execution_thread.error.connect(self._on_execution_error)
         
+        get_action_logger().record("开始异步执行工艺流程（UI）")
         # 启动线程
         self.process_execution_thread.start()
     

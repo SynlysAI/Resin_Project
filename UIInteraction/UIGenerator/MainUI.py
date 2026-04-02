@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLineEdit, QProgressBar, QFrame, QScrollArea, QGridLayout, QGroupBox, QTextEdit, QSizePolicy, QHeaderView, QAbstractItemView
 from PySide6.QtCore import Qt, QRegularExpression, QObject, QEvent, Signal, QTimer, QThread
-from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator, QFont
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator, QFont, QCloseEvent
+from Common.ActionLogger import get_action_logger
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit, QProgressBar, QFrame, QWidget, QGroupBox, QGridLayout
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem
 
@@ -19,7 +20,11 @@ class MainUI(QMainWindow):
         self.inject_solution_c = "不良溶剂(1→4)"
 
         self.init_ui()
-        
+
+    def closeEvent(self, event: QCloseEvent):
+        super().closeEvent(event)
+        get_action_logger().persist()
+
     def init_ui(self):
         tab_widget = QTabWidget(self)
         tab_widget.setGeometry(0, 0, 400, 200)
