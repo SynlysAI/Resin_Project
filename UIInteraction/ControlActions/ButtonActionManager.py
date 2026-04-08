@@ -623,7 +623,7 @@ class ButtonActionManager:
         if total > 0:
             self.main_window.label_progress.setText(f"执行进度: {total}/{total}")
             self.main_window.progress_bar.setValue(total)
-        self.ui_feedback.show_message("执行完成", message)
+        #self.ui_feedback.show_message("执行完成", message)
         self.param_storage.is_system_busy = False
         self._clear_process_execution_state()
     
