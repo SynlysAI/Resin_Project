@@ -19,6 +19,10 @@ class ProcessExecutionThread(QThread):
     finished = Signal(str)  # 执行完成信号，参数为状态消息
     error = Signal(str)  # 错误信号，参数为错误消息
     status = Signal(str)  # 状态信号，参数为状态消息
+    # 执行进度：当前步(1-based 执行前为 0 表示已就绪)、总步数
+    progress = Signal(int, int)
+    interrupted = Signal()  # 用户中止执行（未走 error/finished）
+    process_started = Signal(str, int)  # 工艺文件名、总步数（主线程更新查询用）
     
     def __init__(self, device_manager:DeviceManager, parent=None):
         """初始化工艺执行线程
@@ -61,10 +65,16 @@ class ProcessExecutionThread(QThread):
                 # 处理参数
                 processed_seq = process_parameters_by_function(exec_seq, self.device_manager)
                 
-                # 执行序列
-                self._execute_sequence(processed_seq)
+                total = len(processed_seq)
+                self.process_started.emit(filename, total)
+                self.progress.emit(0, total)
                 
-                self.finished.emit(f"工艺文件执行完成：{filename}")
+                ok = self._execute_sequence(processed_seq)
+                if ok:
+                    self.progress.emit(total, total)
+                    self.finished.emit(f"工艺文件执行完成：{filename}")
+                elif not self.is_running:
+                    self.interrupted.emit()
                 
             finally:
                 # 清理临时文件
@@ -76,14 +86,19 @@ class ProcessExecutionThread(QThread):
             self.error.emit(error_msg)
     
     def _execute_sequence(self, sequence):
-        """遍历序列，按顺序执行每个函数（在线程中运行）"""
+        """遍历序列，按顺序执行每个函数（在线程中运行）
+        
+        Returns:
+            bool: 全部步骤执行成功为 True；用户停止或某步失败为 False
+        """
         if not sequence:
-            return
+            return True
         
         for idx, (func, args) in enumerate(sequence, 1):
             if not self.is_running:
-                break
-                
+                return False
+            
+            self.progress.emit(idx, len(sequence))
             self.status.emit(f"执行第 {idx}/{len(sequence)} 个命令：{func.__name__}")
             
             try:
@@ -96,7 +111,8 @@ class ProcessExecutionThread(QThread):
                 func(*args)
             except Exception as e:
                 self.error.emit(f"第 {idx} 个命令执行失败：{str(e)}")
-                return
+                return False
+        return True
     
     def stop(self):
         """停止执行"""
@@ -551,14 +567,25 @@ class ButtonActionManager:
         
         # 设置系统状态为忙
         self.param_storage.is_system_busy = True
+        self.param_storage.process_execution_running = True
+        self.param_storage.process_execution_filename = ""
+        self.param_storage.process_execution_current_step = 0
+        self.param_storage.process_execution_total_steps = 0
+        
+        self.main_window.label_progress.setText("执行进度: 0/0")
+        self.main_window.progress_bar.setRange(0, 1)
+        self.main_window.progress_bar.setValue(0)
         
         # 创建新的执行线程
         self.process_execution_thread = ProcessExecutionThread(self.device_manager)
         
         # 连接信号槽
         self.process_execution_thread.status.connect(self._on_execution_status)
+        self.process_execution_thread.progress.connect(self._on_process_progress)
         self.process_execution_thread.finished.connect(self._on_execution_finished)
         self.process_execution_thread.error.connect(self._on_execution_error)
+        self.process_execution_thread.interrupted.connect(self._on_process_interrupted)
+        self.process_execution_thread.process_started.connect(self._on_process_started)
         
         get_action_logger().record("开始异步执行工艺流程（UI）")
         # 启动线程
@@ -569,21 +596,60 @@ class ButtonActionManager:
         print(f"📋 {message}")
         # 可以在这里添加UI更新逻辑，如在状态栏显示消息
     
+    def _on_process_progress(self, current: int, total: int):
+        """更新工艺流程标签页：第几步 / 总计几步"""
+        if total <= 0:
+            self.main_window.label_progress.setText("执行进度: 0/0")
+            self.main_window.progress_bar.setRange(0, 1)
+            self.main_window.progress_bar.setValue(0)
+            self.param_storage.process_execution_current_step = 0
+            self.param_storage.process_execution_total_steps = 0
+            return
+        self.param_storage.process_execution_current_step = current
+        self.param_storage.process_execution_total_steps = total
+        self.main_window.label_progress.setText(f"执行进度: {current}/{total}")
+        self.main_window.progress_bar.setRange(0, total)
+        self.main_window.progress_bar.setValue(min(max(current, 0), total))
+    
+    def _on_process_started(self, filename: str, total: int):
+        self.param_storage.process_execution_filename = filename or ""
+        self.param_storage.process_execution_total_steps = total
+        self.param_storage.process_execution_current_step = 0
+    
     def _on_execution_finished(self, message):
         """处理执行完成"""
         print(f"✅ {message}")
-        # 可以在这里添加UI更新逻辑，如显示完成消息
+        total = self.main_window.progress_bar.maximum()
+        if total > 0:
+            self.main_window.label_progress.setText(f"执行进度: {total}/{total}")
+            self.main_window.progress_bar.setValue(total)
         self.ui_feedback.show_message("执行完成", message)
-        # 设置系统状态为空闲
         self.param_storage.is_system_busy = False
+        self._clear_process_execution_state()
     
     def _on_execution_error(self, message):
         """处理执行错误"""
         print(f"❌ {message}")
-        # 显示错误消息
+        self.main_window.label_progress.setText("执行进度: 0/0")
+        self.main_window.progress_bar.setRange(0, 1)
+        self.main_window.progress_bar.setValue(0)
         self.ui_feedback.show_error("执行错误", message)
-        # 设置系统状态为空闲
         self.param_storage.is_system_busy = False
+        self._clear_process_execution_state()
+    
+    def _on_process_interrupted(self):
+        """工艺线程被 stop() 中止时释放忙状态并复位进度显示"""
+        self.main_window.label_progress.setText("执行进度: 0/0")
+        self.main_window.progress_bar.setRange(0, 1)
+        self.main_window.progress_bar.setValue(0)
+        self.param_storage.is_system_busy = False
+        self._clear_process_execution_state()
+    
+    def _clear_process_execution_state(self):
+        self.param_storage.process_execution_running = False
+        self.param_storage.process_execution_filename = ""
+        self.param_storage.process_execution_current_step = 0
+        self.param_storage.process_execution_total_steps = 0
     
     def toggle_control_mode(self):
         """

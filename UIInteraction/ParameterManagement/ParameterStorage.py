@@ -84,6 +84,11 @@ class ParameterStorage:
         self.is_local_control = True  # 默认本地控制模式
         # 系统状态：True为系统正忙（执行动作中），False为空闲
         self.is_system_busy = False  # 默认系统空闲
+        # 工艺流程异步执行状态（供 UDP 等查询，与 is_system_busy 含义独立）
+        self.process_execution_running = False
+        self.process_execution_filename = ""
+        self.process_execution_current_step = 0
+        self.process_execution_total_steps = 0
         # 初始化所有可能用到的变量
         self.select_port = ''  # 反应器选择的串口
         self.select_port_fixpump = ''  # 固定泵选择的串口

@@ -638,6 +638,24 @@ def Import_Parament_UDP(message,device_manager:DeviceManager,send_response_func=
                 print(f"发送后处理模块状态响应时出错: {e}")
         return
     
+    elif cmd == "GET_PROCESS_EXECUTION_STATE":
+        print("处理GET_PROCESS_EXECUTION_STATE请求")
+        running = parameter_storage.process_execution_running
+        state = {
+            "status": "success",
+            "command": "GET_PROCESS_EXECUTION_STATE",
+            "executing": running,
+            "process_name": parameter_storage.process_execution_filename if running else "",
+            "current_step": parameter_storage.process_execution_current_step if running else 0,
+            "total_steps": parameter_storage.process_execution_total_steps if running else 0,
+        }
+        if send_response_func:
+            try:
+                send_response_func(state)
+            except Exception as e:
+                print(f"发送工艺流程执行状态响应时出错: {e}")
+        return
+    
     # 如果是其他消息，继续执行原有的处理逻辑
     # 使用generate_execution_sequence_from_content函数解析UDP消息
     execution_sequence = generate_execution_sequence_from_content(message)
