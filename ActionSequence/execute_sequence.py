@@ -391,9 +391,7 @@ def Import_Process_UDP(table_widget):
 
     功能：从数据库中读取当前活跃的工艺文件，解析并显示到指定的表格中
     """
-    from PySide6.QtWidgets import QFileDialog, QMessageBox
     from PySide6.QtCore import Qt
-    import shutil
     # 从数据库获取当前活跃的工艺文件
     filename, content = get_active_process_file()
     print(f"当前活跃的工艺文件：{filename}")
@@ -402,61 +400,95 @@ def Import_Process_UDP(table_widget):
         temp_file.write(content)
         temp_file_path = temp_file.name
     exec_seq = generate_execution_sequence(temp_file_path)
-    # 清空现有表格内容
-    table_widget.setRowCount(0)
-        
-    # 确保表格有足够的列（根据MainUI中的设置，我们使用2列：函数名和参数）
-    if table_widget.columnCount() < 2:
-        table_widget.setColumnCount(2)
-    
-    # 填充表格数据
-    if exec_seq:
-        for i, (func, args) in enumerate(exec_seq):
-            # 查找函数名对应的命令名
-            cmd_name = "未知命令"
-            for cmd, f in command_to_func.items():
-                if f == func:
-                    cmd_name = cmd
-                    break
-            
-            # 添加新行
-            table_widget.insertRow(i)
-            
-            # 设置单元格内容
-            # 第0列：命令名
-            command_item = QTableWidgetItem(cmd_name)
-            command_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            command_item.setFlags(command_item.flags() & ~Qt.ItemIsEditable)  # 设为不可编辑
-            table_widget.setItem(i, 0, command_item)
-            
-            # 第1列：参数列表
-            params_item = QTableWidgetItem(str(tuple(args)))
-            params_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            params_item.setFlags(params_item.flags() & ~Qt.ItemIsEditable)  # 设为不可编辑
-            table_widget.setItem(i, 1, params_item)
-        
-        # 自动调整列宽
-        table_widget.horizontalHeader().setStretchLastSection(True)
-    else:
-        # 如果没有数据，显示提示信息
-        table_widget.insertRow(0)
-        
-        no_data_item = QTableWidgetItem("未读取到任何有效命令")
-        no_data_item.setTextAlignment(Qt.AlignCenter)
-        no_data_item.setForeground(Qt.red)
-        no_data_item.setFlags(no_data_item.flags() & ~Qt.ItemIsEditable)
-        
-        # 合并单元格显示提示信息
-        table_widget.setItem(0, 0, no_data_item)
-        table_widget.setSpan(0, 0, 1, 2)  # 合并第0行的0-1列
-        
-    # 发出信号通知表格内容已更新
-    table_widget.viewport().update()
+    _populate_process_table(table_widget, exec_seq, Qt)
     
     # 显示成功消息
     print(f"✅ 成功导入工艺文件，共读取到 {len(exec_seq)} 条命令")
     # 移除临时文件
     os.remove(temp_file_path)
+
+
+def _populate_process_table(table_widget, exec_seq, qt_module):
+    """将工艺解析结果填充到表格中，供不同导入入口复用。"""
+    table_widget.setRowCount(0)
+
+    if table_widget.columnCount() < 2:
+        table_widget.setColumnCount(2)
+
+    if exec_seq:
+        for i, (func, args) in enumerate(exec_seq):
+            cmd_name = "未知命令"
+            for cmd, mapped_func in command_to_func.items():
+                if mapped_func == func:
+                    cmd_name = cmd
+                    break
+
+            table_widget.insertRow(i)
+
+            command_item = QTableWidgetItem(cmd_name)
+            command_item.setTextAlignment(qt_module.AlignLeft | qt_module.AlignVCenter)
+            command_item.setFlags(command_item.flags() & ~qt_module.ItemIsEditable)
+            table_widget.setItem(i, 0, command_item)
+
+            params_item = QTableWidgetItem(str(tuple(args)))
+            params_item.setTextAlignment(qt_module.AlignLeft | qt_module.AlignVCenter)
+            params_item.setFlags(params_item.flags() & ~qt_module.ItemIsEditable)
+            table_widget.setItem(i, 1, params_item)
+
+        table_widget.horizontalHeader().setStretchLastSection(True)
+    else:
+        table_widget.insertRow(0)
+        no_data_item = QTableWidgetItem("未读取到任何有效命令")
+        no_data_item.setTextAlignment(qt_module.AlignCenter)
+        no_data_item.setForeground(qt_module.red)
+        no_data_item.setFlags(no_data_item.flags() & ~qt_module.ItemIsEditable)
+        table_widget.setItem(0, 0, no_data_item)
+        table_widget.setSpan(0, 0, 1, 2)
+
+    table_widget.viewport().update()
+
+
+def Import_Process_By_Path_UDP(table_widget, file_path):
+    """
+    根据UDP传入路径导入工艺文件，保存到数据库并刷新UI表格。
+
+    :return: dict, 包含 success/message/steps_count 字段
+    """
+    from PySide6.QtCore import Qt
+
+    try:
+        normalized_path = str(file_path).strip().strip('"').strip("'")
+        if not normalized_path:
+            return {"success": False, "message": "导入失败：文件路径为空", "steps_count": 0}
+
+        if not os.path.exists(normalized_path):
+            return {"success": False, "message": f"导入失败：文件不存在 {normalized_path}", "steps_count": 0}
+
+        if not os.path.isfile(normalized_path):
+            return {"success": False, "message": f"导入失败：路径不是文件 {normalized_path}", "steps_count": 0}
+
+        with open(normalized_path, "r", encoding="utf-8") as process_file:
+            file_content = process_file.read()
+
+        if not file_content.strip():
+            return {"success": False, "message": "导入失败：工艺文件为空", "steps_count": 0}
+
+        original_filename = os.path.basename(normalized_path)
+        save_process_file(original_filename, file_content)
+
+        exec_seq = generate_execution_sequence(normalized_path)
+        _populate_process_table(table_widget, exec_seq, Qt)
+        steps_count = len(exec_seq)
+
+        return {
+            "success": True,
+            "message": f"导入成功：{original_filename}，共{steps_count}条命令",
+            "steps_count": steps_count
+        }
+    except UnicodeDecodeError:
+        return {"success": False, "message": "导入失败：文件编码不是UTF-8", "steps_count": 0}
+    except Exception as e:
+        return {"success": False, "message": f"导入失败：{e}", "steps_count": 0}
 
     
 def Import_Parament_UDP(message,device_manager:DeviceManager,send_response_func=None):

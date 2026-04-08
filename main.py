@@ -12,7 +12,7 @@ from BusinessActions.UIFeedback.UIFeedbackHandler import UIFeedbackHandler
 from UIInteraction.ControlActions.DisplayActionManager import DisplayActionManager
 from UIInteraction.RealTimeUpdate.RealTimeUpdate import RealTimeUpdate
 from UDP_recivecmd import UDPSignalReceiver
-from ActionSequence.execute_sequence import Import_Process_UDP,Import_Parament_UDP
+from ActionSequence.execute_sequence import Import_Process_UDP, Import_Parament_UDP, Import_Process_By_Path_UDP
 import socket
 import json
 
@@ -101,6 +101,39 @@ if __name__ == "__main__":
             get_action_logger().record(f"UDP：参数下发 {msg}")
         else:
             get_action_logger().record("UDP：参数下发（OK）")
+        # 新增UDP协议：按路径导入工艺文件
+        if message:
+            stripped_message = str(message).strip()
+
+            if stripped_message.startswith("IMPORT_PROCESS_FILE(") and stripped_message.endswith(")"):
+                path_param = stripped_message[len("IMPORT_PROCESS_FILE("):-1].strip()
+                result = Import_Process_By_Path_UDP(main_window.table_process, path_param)
+                response = {
+                    "status": "success" if result.get("success") else "error",
+                    "command": "IMPORT_PROCESS_FILE",
+                    "message": result.get("message", ""),
+                    "steps_count": result.get("steps_count", 0)
+                }
+                response_sender(response)
+                return
+
+            # 新增UDP协议：触发工艺流程执行（等价于点击执行按钮）
+            if stripped_message == "EXECUTE_PROCESS_FILE":
+                try:
+                    button_manager.execute_process_async()
+                    response_sender({
+                        "status": "success",
+                        "command": "EXECUTE_PROCESS_FILE",
+                        "message": "已触发工艺流程执行"
+                    })
+                except Exception as e:
+                    response_sender({
+                        "status": "error",
+                        "command": "EXECUTE_PROCESS_FILE",
+                        "message": f"触发执行失败：{e}"
+                    })
+                return
+
         Import_Parament_UDP(message, device_manager, response_sender)
 
     udp_receiver2.set_signal_handler(on_udp_param)
