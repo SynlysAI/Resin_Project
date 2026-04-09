@@ -4,7 +4,7 @@ from Common.ActionLogger import get_action_logger
 from UIInteraction.ControlActions.InputActionManager import InputActionManager
 from BusinessActions.DeviceManager import DeviceManager
 from PySide6.QtWidgets import QApplication, QPushButton
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QTimer, Qt, QObject, Signal
 import sys
 from UIInteraction.ControlActions.ButtonActionManager import ButtonActionManager
 from UIInteraction.ParameterManagement.ParameterStorage import ParameterStorage
@@ -15,6 +15,13 @@ from UDP_recivecmd import UDPSignalReceiver
 from ActionSequence.execute_sequence import Import_Process_UDP, Import_Parament_UDP, Import_Process_By_Path_UDP
 import socket
 import json
+
+
+class UdpCommandBridge(QObject):
+    """将 UDP 线程命令桥接到 Qt 主线程执行。"""
+
+    execute_process_requested = Signal()
+
 
 def send_udp_response(host, port, message):
     """
@@ -92,6 +99,10 @@ if __name__ == "__main__":
     
     # 获取预先设定了参数的闭包函数
     response_sender = create_response_sender()
+
+    # UDP -> Qt 主线程 执行桥
+    udp_bridge = UdpCommandBridge()
+    udp_bridge.execute_process_requested.connect(button_manager.execute_process_async)
     
     def on_udp_param(message=None):
         if message is not None:
@@ -120,7 +131,8 @@ if __name__ == "__main__":
             # 新增UDP协议：触发工艺流程执行（等价于点击执行按钮）
             if stripped_message == "EXECUTE_PROCESS_FILE":
                 try:
-                    button_manager.execute_process_async()
+                    # 由 UDP 监听线程发起，转到 Qt 主线程执行
+                    udp_bridge.execute_process_requested.emit()
                     response_sender({
                         "status": "success",
                         "command": "EXECUTE_PROCESS_FILE",
