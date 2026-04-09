@@ -20,7 +20,7 @@ class ProcessExecutionThread(QThread):
     error = Signal(str)  # 错误信号，参数为错误消息
     status = Signal(str)  # 状态信号，参数为状态消息
     # 执行进度：当前步(1-based 执行前为 0 表示已就绪)、总步数
-    progress = Signal(int, int)
+    progress = Signal(int, int, str)
     interrupted = Signal()  # 用户中止执行（未走 error/finished）
     process_started = Signal(str, int)  # 工艺文件名、总步数（主线程更新查询用）
     
@@ -67,11 +67,11 @@ class ProcessExecutionThread(QThread):
                 
                 total = len(processed_seq)
                 self.process_started.emit(filename, total)
-                self.progress.emit(0, total)
+                self.progress.emit(0, total, "")
                 
                 ok = self._execute_sequence(processed_seq)
                 if ok:
-                    self.progress.emit(total, total)
+                    self.progress.emit(total, total, "")
                     self.finished.emit(f"工艺文件执行完成：{filename}")
                 elif not self.is_running:
                     self.interrupted.emit()
@@ -98,7 +98,7 @@ class ProcessExecutionThread(QThread):
             if not self.is_running:
                 return False
             
-            self.progress.emit(idx, len(sequence))
+            self.progress.emit(idx, len(sequence), func.__name__)
             self.status.emit(f"执行第 {idx}/{len(sequence)} 个命令：{func.__name__}")
             
             try:
@@ -571,6 +571,7 @@ class ButtonActionManager:
         self.param_storage.process_execution_filename = ""
         self.param_storage.process_execution_current_step = 0
         self.param_storage.process_execution_total_steps = 0
+        self.param_storage.process_execution_current_command = ""
         
         self.main_window.label_progress.setText("执行进度: 0/0")
         self.main_window.progress_bar.setRange(0, 1)
@@ -596,7 +597,7 @@ class ButtonActionManager:
         print(f"📋 {message}")
         # 可以在这里添加UI更新逻辑，如在状态栏显示消息
     
-    def _on_process_progress(self, current: int, total: int):
+    def _on_process_progress(self, current: int, total: int, command_name: str):
         """更新工艺流程标签页：第几步 / 总计几步"""
         if total <= 0:
             self.main_window.label_progress.setText("执行进度: 0/0")
@@ -604,9 +605,12 @@ class ButtonActionManager:
             self.main_window.progress_bar.setValue(0)
             self.param_storage.process_execution_current_step = 0
             self.param_storage.process_execution_total_steps = 0
+            self.param_storage.process_execution_current_command = ""
             return
         self.param_storage.process_execution_current_step = current
         self.param_storage.process_execution_total_steps = total
+        if command_name and command_name.strip().lower() != "wait":
+            self.param_storage.process_execution_current_command = command_name
         self.main_window.label_progress.setText(f"执行进度: {current}/{total}")
         self.main_window.progress_bar.setRange(0, total)
         self.main_window.progress_bar.setValue(min(max(current, 0), total))
@@ -615,6 +619,7 @@ class ButtonActionManager:
         self.param_storage.process_execution_filename = filename or ""
         self.param_storage.process_execution_total_steps = total
         self.param_storage.process_execution_current_step = 0
+        self.param_storage.process_execution_current_command = ""
     
     def _on_execution_finished(self, message):
         """处理执行完成"""
@@ -650,6 +655,7 @@ class ButtonActionManager:
         self.param_storage.process_execution_filename = ""
         self.param_storage.process_execution_current_step = 0
         self.param_storage.process_execution_total_steps = 0
+        self.param_storage.process_execution_current_command = ""
     
     def toggle_control_mode(self):
         """

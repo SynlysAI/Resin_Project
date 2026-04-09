@@ -89,6 +89,7 @@ class ParameterStorage:
         self.process_execution_filename = ""
         self.process_execution_current_step = 0
         self.process_execution_total_steps = 0
+        self.process_execution_current_command = ""
         # 初始化所有可能用到的变量
         self.select_port = ''  # 反应器选择的串口
         self.select_port_fixpump = ''  # 固定泵选择的串口

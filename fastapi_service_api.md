@@ -150,12 +150,18 @@
   "ok": true,
   "request_id": "2e0ab3df-8ea5-4f30-a5ca-3e9c8388f910",
   "status": "running",
-  "detail": "process=demo, step=3/10, executing=True",
+  "detail": "process=control_instructions, step=21/34, current_command=Add_Solution_to_Reactor, executing=True",
+  "current_command": "Add_Solution_to_Reactor",
   "last_plan_updated_at": "2026-04-08T12:34:56.789012",
   "last_triggered_at": "2026-04-08T12:34:56.789012",
   "generated_at": "2026-04-08T12:36:05.456789"
 }
 ```
+
+字段补充说明：
+
+- `current_command`：当前执行步骤的命令名（来自执行线程当前步骤函数名）
+- 当当前步骤命令为 `Wait` 时，不会覆盖 `current_command`，会保留上一条非 `Wait` 的命令名
 
 `status` 可能值：
 

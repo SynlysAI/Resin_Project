@@ -44,6 +44,7 @@ class StatusResponse(BaseModel):
     request_id: Optional[str]
     status: str
     detail: str
+    current_command: str
     last_plan_updated_at: Optional[str]
     last_triggered_at: Optional[str]
     generated_at: str
@@ -165,7 +166,7 @@ app = FastAPI(
 )
 
 
-def _parse_execution_state_response(response: Any) -> tuple[str, str]:
+def _parse_execution_state_response(response: Any) -> tuple[str, str, str]:
     if not isinstance(response, dict):
         raise UdpClientError("GET_PROCESS_EXECUTION_STATE 返回了非 JSON 响应")
 
@@ -186,10 +187,14 @@ def _parse_execution_state_response(response: Any) -> tuple[str, str]:
         process_name = str(response.get("process_name", ""))
         current_step = int(response.get("current_step", 0))
         total_steps = int(response.get("total_steps", 0))
-        detail = f"process={process_name or '<unknown>'}, step={current_step}/{total_steps}, executing=True"
-        return "running", detail
+        current_command = str(response.get("current_command", ""))
+        detail = (
+            f"process={process_name or '<unknown>'}, step={current_step}/{total_steps}, "
+            f"current_command={current_command or '<unknown>'}, executing=True"
+        )
+        return "running", detail, current_command
 
-    return "success", "当前没有流程在执行（executing=False）"
+    return "success", "当前没有流程在执行（executing=False）", ""
 
 
 def _run_generation_task(experiment_plan: str, request_id: str) -> None:
@@ -280,7 +285,7 @@ def get_experiment_status() -> StatusResponse:
             port=udp_port,
             timeout_s=udp_timeout_s,
         )
-        status, detail = _parse_execution_state_response(result["response"])
+        status, detail, current_command = _parse_execution_state_response(result["response"])
     except UdpClientError as exc:
         logger.exception("GET_PROCESS_EXECUTION_STATE 调用失败")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -291,6 +296,7 @@ def get_experiment_status() -> StatusResponse:
         request_id=snapshot["request_id"],
         status=status,
         detail=detail,
+        current_command=current_command,
         last_plan_updated_at=snapshot["last_plan_updated_at"],
         last_triggered_at=snapshot["last_triggered_at"],
         generated_at=_utcnow().isoformat(),
