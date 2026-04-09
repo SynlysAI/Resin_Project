@@ -1,13 +1,12 @@
-import sqlite3
 import datetime
-import os
+import sqlite3
 
-# 数据库文件路径，使用绝对路径
-db_path = os.path.join('E:\\AI_PJDataBase', 'process_db.db')
+from config import DB_PATH
+
 
 def init_database():
     """初始化数据库连接和表结构"""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     # 创建工艺文件表
@@ -34,7 +33,7 @@ def save_process_file(filename, content):
     Returns:
         int: 保存的文件ID
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
@@ -70,7 +69,7 @@ def get_active_process_file():
     Returns:
         tuple: (filename, content)，如果没有活跃文件返回(None, None)
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
@@ -99,7 +98,7 @@ def get_process_file_by_id(file_id):
     Returns:
         tuple: (filename, content)，如果没有找到返回(None, None)
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
@@ -128,7 +127,7 @@ def set_active_file(file_id):
     Returns:
         bool: 是否设置成功
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:

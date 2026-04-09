@@ -1,5 +1,10 @@
 import logging
+import os
+
 from langchain_openai import ChatOpenAI
+
+# 数据库文件路径，使用相对路径，位于根目录下
+DB_PATH = os.path.join('E:\\AI_PJDataBase', 'process_db.db')
 
 # 配置日志记录
 def setup_logging(log_level=logging.INFO, logger_name='scp'):

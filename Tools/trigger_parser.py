@@ -3,10 +3,8 @@ import socket
 import datetime
 import sqlite3
 
-from config import create_llm_client
+from config import create_llm_client, DB_PATH
 
-# 数据库文件路径，使用相对路径，位于根目录下
-db_path = os.path.join('E:\\AI_PJDataBase', 'process_db.db')
 
 LLM_CLIENT = create_llm_client()
 
@@ -55,7 +53,7 @@ def save_process_file(filename, content):
     Returns:
         int: 保存的文件ID
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     try:
