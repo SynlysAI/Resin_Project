@@ -648,6 +648,7 @@ def Import_Parament_UDP(message,device_manager:DeviceManager,send_response_func=
             "process_name": parameter_storage.process_execution_filename if running else "",
             "current_step": parameter_storage.process_execution_current_step if running else 0,
             "total_steps": parameter_storage.process_execution_total_steps if running else 0,
+            "current_command": parameter_storage.process_execution_current_command if running else "",
         }
         if send_response_func:
             try:
