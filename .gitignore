@@ -14,6 +14,11 @@ __pycache__/
 build/
 dist/
 *.spec
+!ResinWorkstation.spec
+!InitDatabase.spec
+
+# 打包用虚拟环境
+.venv-pack/
 
 # 测试文件
 *.log
@@ -38,4 +43,5 @@ Thumbs.db
 *.csv
 *.xlsx
 *.txt
+!requirements-pack.txt
 *.md

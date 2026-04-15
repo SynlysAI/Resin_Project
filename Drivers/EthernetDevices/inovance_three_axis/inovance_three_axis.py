@@ -110,7 +110,7 @@ class Inovance_Three_Axis:
             time.sleep(2)
         if not modbus_client.client.is_socket_open():
             raise ValueError('modbus tcp connection failed')
-        self.nodes = BaseClient.load_csv('.\inovance_three_axis.csv')
+        self.nodes = BaseClient.load_csv('.\\inovance_three_axis.csv')
         self.client  = modbus_client.register_node_list(self.nodes)
         self.success = False
         self.csv_export_thread = None

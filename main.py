@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # 启动监听
     udp_receiver.start_listening()
     #建立第二个UDP监听线程
-    udp_receiver2 = UDPSignalReceiver(host="127.0.0.1", port=8889)
+    udp_receiver2 = UDPSignalReceiver(host="0.0.0.0", port=8889)
     # 创建一个闭包函数，预先设定send_udp_response的参数
     def create_response_sender():
         def send_response(message=None):

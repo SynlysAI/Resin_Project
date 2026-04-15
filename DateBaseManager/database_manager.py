@@ -1,12 +1,32 @@
 import sqlite3
 import datetime
 import os
+import sys
 
-# 数据库文件路径，使用绝对路径
-db_path = os.path.join('E:\\AI_PJDataBase', 'process_db.db')
+
+def _default_db_path():
+    """开发环境沿用 E 盘路径；PyInstaller 打包后使用本机可写目录，避免目标机无 E 盘失败。"""
+    override = os.environ.get("RESIN_PROCESS_DB")
+    if override:
+        return os.path.normpath(override)
+    if getattr(sys, "frozen", False):
+        base = os.path.join(
+            os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+            "ResinWorkstation",
+        )
+        return os.path.join(base, "process_db.db")
+    return os.path.join("E:\\AI_PJDataBase", "process_db.db")
+
+
+# 数据库文件路径（与主程序、InitDatabase.exe 共用同一逻辑）
+db_path = _default_db_path()
+
 
 def init_database():
-    """初始化数据库连接和表结构"""
+    """初始化数据库目录、连接和表结构（可重复执行，表已存在则跳过创建）"""
+    db_dir = os.path.dirname(os.path.abspath(db_path))
+    os.makedirs(db_dir, exist_ok=True)
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -158,6 +178,28 @@ def set_active_file(file_id):
     finally:
         conn.close()
 
+def _configure_stdio_utf8_windows():
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+
+def main():
+    """作为独立脚本运行：先初始化数据库再退出。"""
+    _configure_stdio_utf8_windows()
+    try:
+        init_database()
+        print(f"数据库初始化完成: {os.path.abspath(db_path)}")
+        return 0
+    except Exception as e:
+        print(f"数据库初始化失败: {e}", file=sys.stderr)
+        return 1
+
+
 if __name__ == "__main__":
-    # 初始化数据库
-    init_database()
+    sys.exit(main())
