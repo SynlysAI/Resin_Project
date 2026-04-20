@@ -6,18 +6,34 @@ class Pump:
         self.serial_port = serial_port
         self.address = address
 
+    def _modbus_validator(self, expected_func: int):
+        def _validate(resp: bytes):
+            if len(resp) < 2:
+                return False, "header_too_short"
+            if resp[0] != self.address:
+                return False, f"address_mismatch(expected={self.address}, actual={resp[0]})"
+            if resp[1] != expected_func:
+                return False, f"function_mismatch(expected={expected_func}, actual={resp[1]})"
+            return True, "ok"
+
+        return _validate
+
     def move_absolute(self, position_ml: float):
         position_ul = int(position_ml * 1000)  # 转换为微升
         # 位置值转为4字节16进制
         pos_bytes = position_ul.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x14]) + pos_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # 若recv为空，再次发送同样的指令
         max_retries = 3  # 最大重试次数
         retry_count = 0
         while not recv and retry_count < max_retries:
             print(f"未收到响应，第 {retry_count + 1} 次重试...")
-            recv = self.serial_port.sendcmd(data, 8)
+            recv = self.serial_port.sendcmd(
+                data, 8, validator=self._modbus_validator(0x06), retries=1, retry_delay_s=0.1
+            )
             retry_count += 1
         if not recv:
             print("多次重试后仍未收到响应")
@@ -39,7 +55,9 @@ class Pump:
 
     def force_reset(self):
         data = bytes([self.address, 0x06, 0x00, 0x14, 0xFF, 0xFF])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -61,7 +79,9 @@ class Pump:
         speed_ul_s = int(speed_ml_s * 1000)  # 转换为微升每秒
         speed_bytes = speed_ul_s.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x0C]) + speed_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -72,7 +92,9 @@ class Pump:
 
     def get_current_volume(self):
         data = bytes([self.address, 0x03, 0x00, 0x14, 0x00, 0x01])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x03), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -80,16 +102,14 @@ class Pump:
         # self.serial_port.ser.write(packet)
         # recv = self.serial_port.ser.read(8)
         # print('接收数据:', recv.hex(' ').upper())
-        # 以下代码针对各个方法中的 sendcmd 调用添加空响应重试逻辑，因未明确具体选择范围，推测是在 get_current_volume 方法中
-        # 对 recv 为空的情况添加重试逻辑
-        recv = self.serial_port.sendcmd(data,8)
-        
         max_retries = 3  # 最大重试次数
         retry_count = 0
         while len(recv) != 8 and retry_count < max_retries:
             print(f"返回结果不是8位，第 {retry_count + 1} 次重试...")
             time.sleep(1)
-            recv = self.serial_port.sendcmd(data, 8)
+            recv = self.serial_port.sendcmd(
+                data, 8, validator=self._modbus_validator(0x03), retries=1, retry_delay_s=0.1
+            )
             retry_count += 1
         if len(recv) != 8:
             print("多次重试后返回结果仍不是8位")
@@ -102,7 +122,9 @@ class Pump:
 
     def query_speed(self):
         data = bytes([self.address, 0x03, 0x00, 0x0C, 0x00, 0x01])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x03), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -121,11 +143,25 @@ class FixPump:
         self.serial_port = serial_port
         self.address = address
 
+    def _modbus_validator(self, expected_func: int):
+        def _validate(resp: bytes):
+            if len(resp) < 2:
+                return False, "header_too_short"
+            if resp[0] != self.address:
+                return False, f"address_mismatch(expected={self.address}, actual={resp[0]})"
+            if resp[1] != expected_func:
+                return False, f"function_mismatch(expected={expected_func}, actual={resp[1]})"
+            return True, "ok"
+
+        return _validate
+
     def set_speed_rpm(self, speed_rpm: int):
         speed_value = int(speed_rpm)  # 转换为微升每秒
         speed_bytes = speed_value.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x0C]) + speed_bytes
-        recv = self.serial_port.sendcmd(data, 8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
 
     def set_speed(self, speed_ml_s: float):
         """用户按ml/s设置速度，需要换算成rpm"""
@@ -138,7 +174,9 @@ class FixPump:
 
         speed_bytes = speed_value.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x0C]) + speed_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
 
     def set_injection_volume(self, volume_ml: float,conversion_factor:float):
         """用户按ml设置注射量，需要换算为转动次数n"""
@@ -151,7 +189,9 @@ class FixPump:
 
         volume_bytes = volume_value.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x14]) + volume_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -171,7 +211,9 @@ class FixPump:
 
         volume_bytes = rotations.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x14]) + volume_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -189,17 +231,23 @@ class FixPump:
     def stop(self):
         """停止动作"""
         data = bytes([self.address, 0x05, 0x01, 0x00, 0x00, 0x00])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x05), retries=2, retry_delay_s=0.1
+        )
 
     def resume(self):
         """继续运动"""
         data = bytes([self.address, 0x05, 0x01, 0xFF, 0x00, 0x00])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x05), retries=2, retry_delay_s=0.1
+        )
 
     def reset(self):
         """复位动作"""
         data = bytes([self.address, 0x06, 0x00, 0x14, 0x00, 0x00])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
 
     def query_position(self):
         """查询当前位置，返回毫升(ml)单位，遵循协议格式：地址+03 00 14 +xx xx +crc16
@@ -215,7 +263,9 @@ class FixPump:
         # 00 14：寄存器起始地址（十进制20）
         # 00 01：读取寄存器数量（十进制1，转换为两位十六进制00 01）
         data = bytes([self.address, 0x03, 0x00, 0x14, 0x00, 0x00])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x03), retries=2, retry_delay_s=0.1
+        )
 
         # 验证响应有效性
         if len(recv) != 8 or recv[0] != self.address or recv[1] != 0x03:

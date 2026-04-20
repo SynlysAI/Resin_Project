@@ -8,10 +8,24 @@ class Motor:
         self.set_speed_mode()
         self.set_direction()
 
+    def _modbus_validator(self, expected_func: int):
+        def _validate(resp: bytes):
+            if len(resp) < 2:
+                return False, "header_too_short"
+            if resp[0] != self.address:
+                return False, f"address_mismatch(expected={self.address}, actual={resp[0]})"
+            if resp[1] != expected_func:
+                return False, f"function_mismatch(expected={expected_func}, actual={resp[1]})"
+            return True, "ok"
+
+        return _validate
+
     def set_speed_mode(self):
         # 配置电机为速度模式
         data = bytes([self.address, 0x06, 0x62, 0x00, 0x00, 0x02])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -23,7 +37,9 @@ class Motor:
     def set_direction(self):
         # 配置电机方向
         data = bytes([self.address, 0x06, 0x00, 0x07, 0x00, 0x01])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -36,7 +52,9 @@ class Motor:
         #设置运行速度
         speed_bytes = speed_rpm.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06,0x62,0x03]) + speed_bytes
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -48,7 +66,9 @@ class Motor:
     def Run(self):
         # 启动电机
         data = bytes([self.address, 0x06, 0x60, 0x02, 0x00, 0x10])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -60,7 +80,9 @@ class Motor:
     def stop(self):
         # 停止电机
         data = bytes([self.address, 0x06, 0x60, 0x02, 0x00, 0x40])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -72,7 +94,9 @@ class Motor:
 
     def get_state(self):
         data = bytes([self.address, 0x03, 0x10, 0x03, 0x00, 0x01])
-        recv = self.serial_port.sendcmd(data,7)
+        recv = self.serial_port.sendcmd(
+            data, 7, validator=self._modbus_validator(0x03), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -111,7 +135,9 @@ class Motor:
 
     def get_speed(self):
         data = bytes([self.address, 0x03, 0x62, 0x03, 0x00, 0x01])
-        recv = self.serial_port.sendcmd(data,8)
+        recv = self.serial_port.sendcmd(
+            data, 8, validator=self._modbus_validator(0x03), retries=2, retry_delay_s=0.1
+        )
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()

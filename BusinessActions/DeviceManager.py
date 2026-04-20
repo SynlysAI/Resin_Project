@@ -214,7 +214,7 @@ class DeviceManager:
         self.liquid_return_valves=[]
         self.water_valves=[]
         if self.serial_port_post:
-            self.serial_port_post.ser.close()
+            self.serial_port_post.close()
             self.serial_port_post=None
             print("后处理模块串口已关闭")
 
