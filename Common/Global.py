@@ -109,7 +109,7 @@ SWITCH_VALVE_ADDRESS = [
     0x21,  # 模块1阀门地址
     0x24,  # 模块2阀门地址
     0X27,  # 模块3阀门地址
-    0x11,  # 模块4阀门地址
+    0x29,  # 模块4阀门地址
     "",  # 模块5阀门地址
     "",  # 模块6阀门地址
     "",  # 模块7阀门地址
@@ -164,10 +164,10 @@ class IO_POINT(IntEnum):
     Liquid_Return_Valve_2= 7  # 液体回收阀
     
     
-    Gas_Valve_3 = 4  # 气阀1
-    Water_Valve_3 = 5  # 水阀1
-    Discharge_Valve_3 = 6  # 排液阀
-    Liquid_Return_Valve_3 = 7  # 液体回收阀
+    Gas_Valve_3 = 8  # 气阀1
+    Water_Valve_3 = 9  # 水阀1
+    Discharge_Valve_3 = 10  # 排液阀
+    Liquid_Return_Valve_3 = 11  # 液体回收阀
     
     
     Gas_Valve_4 = 12  # 气阀1
