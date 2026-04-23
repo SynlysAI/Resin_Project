@@ -22,19 +22,24 @@ class TemperatureController:
             cmd = f'{self.address:02X}060000{hex_high}{hex_low}'
             cmd_crc = append_crc16(cmd)
             
-            # 使用serial_port发送命令
-            self.serial_port.ser.reset_input_buffer()
-            self.serial_port.ser.write(bytes.fromhex(cmd_crc))
-            print(f"已发送{self.address}号温控器设定温度指令: {cmd_crc}")
-            
-            # 读取响应
-            resp = self.serial_port.ser.read(8)  # 期望返回8字节
-            if len(resp) == 8:
-                print(f"接收{self.address}号温控器设定温度响应: {resp.hex(' ').upper()}")
-                return True
-            else:
+            for attempt in range(3):
+                # 使用serial_port发送命令
+                self.serial_port.ser.reset_input_buffer()
+                self.serial_port.ser.write(bytes.fromhex(cmd_crc))
+                print(f"已发送{self.address}号温控器设定温度指令: {cmd_crc}")
+
+                # 读取响应
+                resp = self.serial_port.ser.read(8)  # 期望返回8字节
+                if len(resp) == 8:
+                    print(f"接收{self.address}号温控器设定温度响应: {resp.hex(' ').upper()}")
+                    return True
+
                 print(f"未收到{self.address}号温控器完整响应")
-                return False
+                if attempt == 0:
+                    print(f"{self.address}号温控器将在1秒后重试设定温度")
+                    time.sleep(1)
+
+            return False
         except Exception as e:
             print(f"设定温度失败: {e}")
             return False
