@@ -21,6 +21,7 @@ from BusinessActions.SingleStepActions.TemperatureControlAction import *
 from BusinessActions.SingleStepActions.ValveAction import *
 from BusinessActions.DeviceManager import DeviceManager
 from UIInteraction.ParameterManagement.ParameterStorage import ParameterStorage
+from Common.ActionLogger import get_action_logger
 
 
 
@@ -252,6 +253,7 @@ def process_parameters_by_function(sequence, device_manager):
 # ------------------------------
 def execute_sequence(sequence):
     """遍历序列，按顺序执行每个函数"""
+    logger = get_action_logger()
     print("="*60)
     print("📋 命令序列执行开始")
     print("="*60)
@@ -264,11 +266,32 @@ def execute_sequence(sequence):
         print(f"\n【第{idx}/{len(sequence)}个命令】")
         print(f"命令名：{func.__name__}")
         print(f"参数：{args}")
+        module_number = None
+        is_post_clean = func.__name__ == "Auto_CleanProgram"
+        if is_post_clean:
+            for arg in args:
+                if isinstance(arg, int):
+                    module_number = arg
+                    break
+            module_token = module_number if module_number is not None else "unknown"
+            logger.record(
+                f"后处理 流程=自动清洁 模块={module_token} 动作=自动清洁程序 状态=开始 来源=工艺序列"
+            )
         try:
             func(*args)  # 解包参数并执行函数
             print("状态：执行成功")
+            if is_post_clean:
+                module_token = module_number if module_number is not None else "unknown"
+                logger.record(
+                    f"后处理 流程=自动清洁 模块={module_token} 动作=自动清洁程序 状态=完成 来源=工艺序列"
+                )
         except Exception as e:
             print(f"状态：执行失败 | 错误原因：{e}")
+            if is_post_clean:
+                module_token = module_number if module_number is not None else "unknown"
+                logger.record(
+                    f"后处理 流程=自动清洁 模块={module_token} 动作=自动清洁程序 状态=失败 来源=工艺序列 异常={e}"
+                )
     
     print("\n" + "="*60)
     print("🏁 命令序列执行结束")

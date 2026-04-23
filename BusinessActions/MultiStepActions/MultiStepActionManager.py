@@ -4,13 +4,112 @@ from BusinessActions.SingleStepActions.MotorAction import Motor_485_idm42_start_
 from BusinessActions.SingleStepActions.ValveAction import Reactor_N2_off, Reactor_N2_on, Valve_close, Valve_open
 from BusinessActions.UIFeedback.UIFeedbackHandler import UIFeedbackHandler
 from Common.Global import Bottle
+from Common.ActionLogger import get_action_logger
 import time
 import threading
 
 from UIInteraction.UIGenerator.MainUI import MainUI
 
-def Add_reactsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.Reaction,Bottle.Reaction,volume,input_speed,module_number=module_number)
+def _record_post_process_log(flow:str,module_number:int,action:str,status:str,**fields):
+    flow_map = {
+        "settle": "自动沉降",
+        "clean": "自动清洁",
+        "manual": "手动后处理"
+    }
+    status_map = {
+        "start": "开始",
+        "done": "完成",
+        "error": "失败"
+    }
+    action_map = {
+        "Auto_SettleProgram": "自动沉降程序",
+        "Auto_CleanProgram": "自动清洁程序",
+        "Solution_transfer_Post": "液体转移",
+        "Add_reactsolution": "添加反应液",
+        "Add_goodsolution": "添加良溶剂",
+        "Add_badsolution": "添加不良溶剂",
+        "Clean_Step_A": "清洁步骤A",
+        "Clean_Step_B": "清洁步骤B",
+        "Air_push_back": "反推回流",
+        "stirrer": "搅拌动作",
+        "settle_cycle": "沉降主流程轮次",
+        "recycle_cycle": "管路回收轮次",
+        "clean_cycle": "清洁流程轮次"
+    }
+    value_map = {
+        "simulation": "仿真",
+        "sequence": "工艺序列",
+        "settle_main": "沉降主流程",
+        "recycle": "管路回收",
+        "clean": "清洁流程",
+        "Reaction": "反应瓶",
+        "GoodSolution": "良溶剂瓶",
+        "BadSolution": "不良溶剂瓶",
+        "TheBigBottle": "沉降瓶",
+        "Air": "空气"
+    }
+    key_map = {
+        "module": "模块",
+        "action": "动作",
+        "status": "状态",
+        "flow": "流程",
+        "volume_ml": "计划转移量ml",
+        "transferred_ml": "实际转移量ml",
+        "origin": "源瓶",
+        "target": "目标瓶",
+        "cycle": "轮次",
+        "speed": "速度",
+        "phase": "阶段",
+        "mode": "模式",
+        "source": "来源",
+        "error": "异常"
+    }
+
+    def _map_value(value):
+        if isinstance(value, str):
+            return value_map.get(value, value)
+        return value
+
+    payload = [
+        "后处理",
+        f"{key_map['flow']}={flow_map.get(flow, flow)}",
+        f"{key_map['module']}={module_number}",
+        f"{key_map['action']}={action_map.get(action, action)}",
+        f"{key_map['status']}={status_map.get(status, status)}"
+    ]
+    for key, value in fields.items():
+        if value is None:
+            continue
+        mapped_key = key_map.get(key, key)
+        mapped_value = _map_value(value)
+        payload.append(f"{mapped_key}={mapped_value}")
+    get_action_logger().record(" ".join(payload))
+
+def _simulate_wait_seconds(label:str, total_seconds:int, max_ticks:int=5):
+    """
+    仿真模式等待：压缩长等待，避免自动流程仿真耗时过长。
+    """
+    if total_seconds <= 0:
+        return
+    tick_count = min(max_ticks, total_seconds)
+    step = max(1, total_seconds // tick_count)
+    elapsed = 0
+    while elapsed < total_seconds:
+        elapsed = min(total_seconds, elapsed + step)
+        time.sleep(0.1)
+        print(f"仿真模式：{label}，已模拟 {elapsed}/{total_seconds} 秒")
+
+def Add_reactsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.Reaction,
+        Bottle.Reaction,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Add_reactsolution"
+    )
 
 def Add_reactsolution_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,volume:float,input_speed:float,module_number:int=1):
     thread=threading.Thread(
@@ -25,8 +124,17 @@ def Add_goodsolution_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandl
     )
     thread.start()
 
-def Add_goodsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.GoodSolution,Bottle.TheBigBottle,volume,input_speed,module_number=module_number)
+def Add_goodsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.GoodSolution,
+        Bottle.TheBigBottle,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Add_goodsolution"
+    )
 
 def Add_badsolution_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,volume:float,input_speed:float,module_number:int=1):
     thread = threading.Thread(
@@ -35,8 +143,17 @@ def Add_badsolution_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandle
     )
     thread.start()
 
-def Add_badsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.BadSolution,Bottle.TheBigBottle,volume,input_speed,module_number=module_number)
+def Add_badsolution(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.BadSolution,
+        Bottle.TheBigBottle,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Add_badsolution"
+    )
 
 def Clean_Step_A_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,volume:float,input_speed:float,module_number:int=1):
     #使用良溶剂注入需要先将良溶剂排入反应瓶
@@ -46,13 +163,22 @@ def Clean_Step_A_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,v
     )
     thread.start()
 
-def Clean_Step_A(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.GoodSolution,Bottle.Reaction,volume,input_speed,module_number=module_number)
+def Clean_Step_A(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.GoodSolution,
+        Bottle.Reaction,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Clean_Step_A"
+    )
 
 
 def Clean_Step_A_with_uichange(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,volume:float,input_speed:float,module_number:int=1):
     uifeedback.control_ui_signal_post.emit()
-    Clean_Step_A(deviceManager,volume,input_speed,module_number=module_number)
+    Clean_Step_A(deviceManager,volume,input_speed,module_number=module_number,flow="manual")
     uifeedback.reset_ui_signal_post.emit()
 
 def Clean_Step_B_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,volume:float,input_speed:float,module_number:int=1):
@@ -63,13 +189,41 @@ def Clean_Step_B_Post(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,v
     )
     thread.start()
 
-def Clean_Step_B(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.Reaction,Bottle.Reaction,volume,input_speed,module_number=module_number)
+def Clean_Step_B(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.Reaction,
+        Bottle.Reaction,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Clean_Step_B"
+    )
 
-def Air_push_back(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1):
-    Solution_transfer_Post(deviceManager,Bottle.Air,Bottle.Reaction,volume,input_speed,module_number=module_number)
+def Air_push_back(deviceManager:DeviceManager,volume:float,input_speed:float,module_number:int=1,flow:str="manual"):
+    Solution_transfer_Post(
+        deviceManager,
+        Bottle.Air,
+        Bottle.Reaction,
+        volume,
+        input_speed,
+        module_number=module_number,
+        flow=flow,
+        action_name="Air_push_back"
+    )
 
-def Solution_transfer_Post(deviceManager:DeviceManager,origin_bottle:Bottle,end_bottle:Bottle,volume:float,input_speed,indraft_speed:float=4.0,module_number:int=1):
+def Solution_transfer_Post(
+    deviceManager:DeviceManager,
+    origin_bottle:Bottle,
+    end_bottle:Bottle,
+    volume:float,
+    input_speed,
+    indraft_speed:float=4.0,
+    module_number:int=1,
+    flow:str="manual",
+    action_name:str="Solution_transfer_Post"
+):
     """
     后处理模块溶液转移
     :param DeviceManager: 设备管理器实例
@@ -80,79 +234,124 @@ def Solution_transfer_Post(deviceManager:DeviceManager,origin_bottle:Bottle,end_
     :param indraft_speed: 吸入速度，单位毫升每分钟，默认值为3.0ml/s
     :param module_number: 模块编号，默认值为1
     """
-    # 检查是否在仿真模式下
-    if deviceManager.simulation_mode:
-        print(f"仿真模式：执行后处理模块溶液转移 - 源瓶: {origin_bottle.name}, 目标瓶: {end_bottle.name}, 体积: {volume} ml, 模块: {module_number}")
-        return True
-    
-    MAX_VOLUME = 25.0
-    pump= deviceManager.pumps[module_number]
-    switchvalve = deviceManager.switch_valves[module_number]
-    water_valve = deviceManager.water_valves[module_number]
-    
+    _record_post_process_log(
+        flow,
+        module_number,
+        action_name,
+        "start",
+        volume_ml=volume,
+        origin=origin_bottle.name,
+        target=end_bottle.name
+    )
+    try:
+        # 检查是否在仿真模式下
+        if deviceManager.simulation_mode:
+            print(f"仿真模式：执行后处理模块溶液转移 - 源瓶: {origin_bottle.name}, 目标瓶: {end_bottle.name}, 体积: {volume} ml, 模块: {module_number}")
+            _record_post_process_log(
+                flow,
+                module_number,
+                action_name,
+                "done",
+                volume_ml=volume,
+                transferred_ml=volume,
+                origin=origin_bottle.name,
+                target=end_bottle.name,
+                mode="simulation"
+            )
+            return True
+        
+        MAX_VOLUME = 25.0
+        pump= deviceManager.pumps[module_number]
+        switchvalve = deviceManager.switch_valves[module_number]
+        water_valve = deviceManager.water_valves[module_number]
+        
 
-    
-    # 对吸入的溶液量进行判断
-    inputvolume = 0.0
-    recycle = 1
-    leftvolume = 0
-    sum_volume=0.0
-    if volume <= MAX_VOLUME:
-        inputvolume = volume
+        
+        # 对吸入的溶液量进行判断
+        inputvolume = 0.0
         recycle = 1
         leftvolume = 0
-    elif volume > MAX_VOLUME:
-        inputvolume = MAX_VOLUME
-        recycle = volume // MAX_VOLUME + 1
-        leftvolume = volume % MAX_VOLUME
-    # 执行液体注入
-    while True:
-        # 设置切换阀对准指定的溶液瓶
-        time.sleep(1)
+        sum_volume=0.0
+        if volume <= MAX_VOLUME:
+            inputvolume = volume
+            recycle = 1
+            leftvolume = 0
+        elif volume > MAX_VOLUME:
+            inputvolume = MAX_VOLUME
+            recycle = volume // MAX_VOLUME + 1
+            leftvolume = volume % MAX_VOLUME
+        # 执行液体注入
+        while True:
+            # 设置切换阀对准指定的溶液瓶
+            time.sleep(1)
 
-        is_pos_right = switchvalve.move_to_position(origin_bottle.value)
-        while not is_pos_right:
             is_pos_right = switchvalve.move_to_position(origin_bottle.value)
-        time.sleep(1)
-        print("请先等待泵复位")
-        pump.force_reset()
-        time.sleep(1)
-        pump.set_speed(indraft_speed)
-        #当且仅当加反应液的时候，才去操纵水阀门
-        if origin_bottle==Bottle.Reaction and end_bottle==Bottle.Reaction:
+            while not is_pos_right:
+                print("切换阀位置错误，请等待复位")
+                switchvalve.move_to_position(0)
+                time.sleep(2)
+                is_pos_right = switchvalve.move_to_position(origin_bottle.value)
+            time.sleep(1)
+            print("请先等待泵复位")
+            pump.force_reset()
+            time.sleep(1)
+            pump.set_speed(indraft_speed)
+            #当且仅当加反应液的时候，才去操纵水阀门
+            if origin_bottle==Bottle.Reaction and end_bottle==Bottle.Reaction:
+                water_valve.close()
+            time.sleep(2)
+            pump.move_absolute(inputvolume)
+            # 设置切换阀对准后处理瓶子
+            time.sleep(1)
+            is_pos_right = switchvalve.move_to_position(end_bottle.value)
+            while not is_pos_right:
+                is_pos_right=switchvalve.move_to_position(end_bottle.value)
+            # 当且仅当加反应液的时候，才去操纵水阀门
+            if origin_bottle == Bottle.Reaction and end_bottle == Bottle.Reaction:
+                water_valve.open()
+            time.sleep(1)
+            # 将溶液注入后处理瓶子
+            pump.set_speed(input_speed)
+            time.sleep(2)
+            pump.move_absolute(0)
+            sum_volume+=inputvolume
+            print("当次溶液转移完成，已转移",sum_volume,"毫升")
+            #关掉水阀
             water_valve.close()
-        time.sleep(2)
-        pump.move_absolute(inputvolume)
-        # 设置切换阀对准后处理瓶子
-        time.sleep(1)
-        is_pos_right = switchvalve.move_to_position(end_bottle.value)
-        while not is_pos_right:
-            is_pos_right=switchvalve.move_to_position(end_bottle.value)
-        # 当且仅当加反应液的时候，才去操纵水阀门
-        if origin_bottle == Bottle.Reaction and end_bottle == Bottle.Reaction:
-            water_valve.open()
-        time.sleep(1)
-        # 将溶液注入后处理瓶子
-        pump.set_speed(input_speed)
-        time.sleep(2)
-        pump.move_absolute(0)
-        sum_volume+=inputvolume
-        print("当次溶液转移完成，已转移",sum_volume,"毫升")
-        #关掉水阀
-        water_valve.close()
-        recycle -= 1
-        if recycle == 0:
-            break
-        if recycle == 1:
-            inputvolume = leftvolume
-    
-    #溶液转移完成后，切换阀位置复位至1号口
-    is_pos_right = switchvalve.move_to_position(Bottle.Reaction.value)
-    while not is_pos_right:
+            recycle -= 1
+            if recycle == 0:
+                break
+            if recycle == 1:
+                inputvolume = leftvolume
+        
+        #溶液转移完成后，切换阀位置复位至1号口
         is_pos_right = switchvalve.move_to_position(Bottle.Reaction.value)
-    print("切换阀位置复位至1号口")
-
-    return True
+        while not is_pos_right:
+            is_pos_right = switchvalve.move_to_position(Bottle.Reaction.value)
+        print("切换阀位置复位至1号口")
+        _record_post_process_log(
+            flow,
+            module_number,
+            action_name,
+            "done",
+            volume_ml=volume,
+            transferred_ml=sum_volume,
+            origin=origin_bottle.name,
+            target=end_bottle.name
+        )
+        return True
+    except Exception as e:
+        _record_post_process_log(
+            flow,
+            module_number,
+            action_name,
+            "error",
+            volume_ml=volume,
+            origin=origin_bottle.name,
+            target=end_bottle.name,
+            error=str(e)
+        )
+        raise
 
 def Solution_transfer_with_uichange(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,origin_bottle:Bottle,end_bottle:Bottle,volume:float,input_speed,module_number:int=1):
     uifeedback.control_ui_signal_post.emit()
@@ -179,77 +378,129 @@ def Auto_SettleProgram(deviceManager:DeviceManager,module_number:int):
     first_stir_time=20
     second_stir_time=10
     pour_time=300#泵出时间，单位秒
-    #沉降过程
-    for i in range(looptimes):
-        Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number)
-        print("不良溶剂添加已完成，第",i+1,"轮")
-        time.sleep(1)
-        Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
-        print("搅拌器已启动，第",i+1,"轮")
-        time.sleep(1)
-        Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number)
-        Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number)
-        print("反应液添加已完成，第",i+1,"轮")
-        time.sleep(1)
-        #添加完反应液后，进行吸气反推，将多余反应液推回反应瓶，以免与不良溶剂混搅在管路内
-        Air_push_back(deviceManager,24.5,2.0,module_number)
-        print("多余反应液已推回反应瓶，第",i+1,"轮")
-        # 等待搅拌时间，每秒打印已等待的时间
-        for elapsed_time in range(1, first_stir_time + 1):
-            time.sleep(1)
-            print(f"正在搅拌，已等待 {elapsed_time} /{first_stir_time}秒，第 {i+1} 轮")
-        time.sleep(1)
-        Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
-        print("开始泵出废液搅拌器速度降低，第",i+1,"轮")
-        time.sleep(1)
-        Valve_open(deviceManager.gas_valves[module_number])
-        Valve_open(deviceManager.discharge_valves[module_number])
-        print("泵出废液，第",i+1,"轮")
-        # 等待泵出时间，每秒打印已等待的时间
-        for elapsed_time in range(1, pour_time + 1):
-            time.sleep(1)
-            print(f"正在泵出废液，已等待 {elapsed_time} /{pour_time}秒，第 {i+1} 轮")
-        Valve_close(deviceManager.gas_valves[module_number])
-        Valve_close(deviceManager.discharge_valves[module_number])
-        print("泵出完成，第",i+1,"轮")
+    _record_post_process_log("settle", module_number, "Auto_SettleProgram", "start")
+    try:
+        # 仿真模式下按完整业务流程执行，但不访问硬件搅拌电机/阀门
+        if deviceManager.simulation_mode:
+            print(f"仿真模式：执行自动沉降程序 - 模块: {module_number}")
+            for i in range(looptimes):
+                cycle = i + 1
+                _record_post_process_log("settle", module_number, "settle_cycle", "start", cycle=cycle, mode="simulation")
+                Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number,flow="settle")
+                Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number,flow="settle")
+                Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number,flow="settle")
+                Air_push_back(deviceManager,24.5,2.0,module_number,flow="settle")
 
-        print("搅拌器已停止，第",i+1,"轮")
-        time.sleep(1)
+                _record_post_process_log("settle", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="settle_main", mode="simulation")
+                _simulate_wait_seconds(f"沉降主流程搅拌第{cycle}轮", first_stir_time)
+                _record_post_process_log("settle", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="settle_main", mode="simulation")
 
-    for i in range(1):
-        #管路回收过程
-        print("开始进行管路回收,第",i+1,"轮")
-        Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number)
-        print("不良溶剂已经泵入，第",i+1,"轮")
-        time.sleep(1)
-        Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
-        print("搅拌器已启动，等待良溶剂进入，第",i+1,"轮")
-        
-        Clean_Step_A(deviceManager,Goodsolution_input_volume,Goodsolution_indraft_speed,module_number)
-        time.sleep(1)
-        print("3ml良溶剂已经泵入反应瓶，第",i+1,"轮")
-        Clean_Step_B(deviceManager,Goodsolution_input_volume,Goodsolution_input_speed,module_number)
-        print("3ml良溶剂已从反应瓶泵入沉降瓶，第",i+1,"轮")
-        
-        # 等待搅拌，
-        for elapsed_time in range(1, second_stir_time + 1):
+                _simulate_wait_seconds(f"沉降主流程泵出第{cycle}轮", pour_time)
+                _record_post_process_log("settle", module_number, "settle_cycle", "done", cycle=cycle, mode="simulation")
+
+            for i in range(1):
+                cycle = i + 1
+                _record_post_process_log("settle", module_number, "recycle_cycle", "start", cycle=cycle, mode="simulation")
+                Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number,flow="settle")
+                Clean_Step_A(deviceManager,Goodsolution_input_volume,Goodsolution_indraft_speed,module_number,flow="settle")
+                Clean_Step_B(deviceManager,Goodsolution_input_volume,Goodsolution_input_speed,module_number,flow="settle")
+
+                _record_post_process_log("settle", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="recycle", mode="simulation")
+                _simulate_wait_seconds(f"沉降回收流程搅拌第{cycle}轮", second_stir_time)
+                _record_post_process_log("settle", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="recycle", mode="simulation")
+
+                _simulate_wait_seconds(f"沉降回收流程泵出第{cycle}轮", pour_time)
+                _record_post_process_log("settle", module_number, "recycle_cycle", "done", cycle=cycle, mode="simulation")
+
+            print("仿真模式：完整沉降过程已完成")
+            _record_post_process_log("settle", module_number, "Auto_SettleProgram", "done", mode="simulation")
+            return
+
+        #沉降过程
+        for i in range(looptimes):
+            cycle = i + 1
+            _record_post_process_log("settle", module_number, "settle_cycle", "start", cycle=cycle)
+            Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number,flow="settle")
+            print("不良溶剂添加已完成，第",cycle,"轮")
             time.sleep(1)
-            print(f"管路回收过程：正在搅拌，已等待 {elapsed_time} /{second_stir_time}秒，第 {i+1} 轮")
-        print("管路回收过程：搅拌完成，第",i+1,"轮")
-        time.sleep(1)
-        Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
-        print("搅拌器已停止，第",i+1,"轮")
-        time.sleep(1)
-        Valve_open(deviceManager.gas_valves[module_number])
-        Valve_open(deviceManager.discharge_valves[module_number])
-        print("泵出废液，第",i+1,"轮")
-        # 等待泵出时间，每秒打印已等待的时间
-        for elapsed_time in range(1, pour_time + 1):
+            _record_post_process_log("settle", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="settle_main")
+            Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
+            print("搅拌器已启动，第",cycle,"轮")
             time.sleep(1)
-            print(f"正在泵出废液，已等待 {elapsed_time} /{pour_time}秒，第 {i+1} 轮")
-        Valve_close(deviceManager.gas_valves[module_number])
-        Valve_close(deviceManager.discharge_valves[module_number])
-    print("完整沉降过程已完成，请人工拆下沉降瓶取固体")
+            Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number,flow="settle")
+            Add_reactsolution(deviceManager,Reactionsolution_input_volume,Reactionsolution_input_speed,module_number,flow="settle")
+            print("反应液添加已完成，第",cycle,"轮")
+            time.sleep(1)
+            #添加完反应液后，进行吸气反推，将多余反应液推回反应瓶，以免与不良溶剂混搅在管路内
+            Air_push_back(deviceManager,24.5,2.0,module_number,flow="settle")
+            print("多余反应液已推回反应瓶，第",cycle,"轮")
+            # 等待搅拌时间，每秒打印已等待的时间
+            for elapsed_time in range(1, first_stir_time + 1):
+                time.sleep(1)
+                print(f"正在搅拌，已等待 {elapsed_time} /{first_stir_time}秒，第 {cycle} 轮")
+            time.sleep(1)
+            Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
+            _record_post_process_log("settle", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="settle_main")
+            print("开始泵出废液搅拌器速度降低，第",cycle,"轮")
+            time.sleep(1)
+            Valve_open(deviceManager.gas_valves[module_number])
+            Valve_open(deviceManager.discharge_valves[module_number])
+            print("泵出废液，第",cycle,"轮")
+            # 等待泵出时间，每秒打印已等待的时间
+            for elapsed_time in range(1, pour_time + 1):
+                time.sleep(1)
+                print(f"正在泵出废液，已等待 {elapsed_time} /{pour_time}秒，第 {cycle} 轮")
+            Valve_close(deviceManager.gas_valves[module_number])
+            Valve_close(deviceManager.discharge_valves[module_number])
+            print("泵出完成，第",cycle,"轮")
+
+            print("搅拌器已停止，第",cycle,"轮")
+            _record_post_process_log("settle", module_number, "settle_cycle", "done", cycle=cycle)
+            time.sleep(1)
+
+        for i in range(1):
+            cycle = i + 1
+            _record_post_process_log("settle", module_number, "recycle_cycle", "start", cycle=cycle)
+            #管路回收过程
+            print("开始进行管路回收,第",cycle,"轮")
+            Add_badsolution(deviceManager,Badsolution_input_volume,Badsolution_input_speed,module_number,flow="settle")
+            print("不良溶剂已经泵入，第",cycle,"轮")
+            time.sleep(1)
+            _record_post_process_log("settle", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="recycle")
+            Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
+            print("搅拌器已启动，等待良溶剂进入，第",cycle,"轮")
+            
+            Clean_Step_A(deviceManager,Goodsolution_input_volume,Goodsolution_indraft_speed,module_number,flow="settle")
+            time.sleep(1)
+            print("3ml良溶剂已经泵入反应瓶，第",cycle,"轮")
+            Clean_Step_B(deviceManager,Goodsolution_input_volume,Goodsolution_input_speed,module_number,flow="settle")
+            print("3ml良溶剂已从反应瓶泵入沉降瓶，第",cycle,"轮")
+            
+            # 等待搅拌，
+            for elapsed_time in range(1, second_stir_time + 1):
+                time.sleep(1)
+                print(f"管路回收过程：正在搅拌，已等待 {elapsed_time} /{second_stir_time}秒，第 {cycle} 轮")
+            print("管路回收过程：搅拌完成，第",cycle,"轮")
+            time.sleep(1)
+            Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
+            _record_post_process_log("settle", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="recycle")
+            print("搅拌器已停止，第",cycle,"轮")
+            time.sleep(1)
+            Valve_open(deviceManager.gas_valves[module_number])
+            Valve_open(deviceManager.discharge_valves[module_number])
+            print("泵出废液，第",cycle,"轮")
+            # 等待泵出时间，每秒打印已等待的时间
+            for elapsed_time in range(1, pour_time + 1):
+                time.sleep(1)
+                print(f"正在泵出废液，已等待 {elapsed_time} /{pour_time}秒，第 {cycle} 轮")
+            Valve_close(deviceManager.gas_valves[module_number])
+            Valve_close(deviceManager.discharge_valves[module_number])
+            _record_post_process_log("settle", module_number, "recycle_cycle", "done", cycle=cycle)
+        print("完整沉降过程已完成，请人工拆下沉降瓶取固体")
+        _record_post_process_log("settle", module_number, "Auto_SettleProgram", "done")
+    except Exception as e:
+        _record_post_process_log("settle", module_number, "Auto_SettleProgram", "error", error=str(e))
+        raise
 
 def Auto_SettleProgram_with_uichange(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,module_number:int):
     uifeedback.auto_settle_program_signal.emit(module_number)
@@ -265,56 +516,78 @@ def Auto_CleanProgram(deviceManager:DeviceManager,module_number:int):
     自动清洁程序
     :param DeviceManager: 设备管理器实例
     """
-    # 检查是否在仿真模式下
-    if deviceManager.simulation_mode:
-        print(f"仿真模式：执行自动清洁程序 - 模块: {module_number}")
-        print("仿真模式：清洁过程将执行3轮，每轮包括：")
-        print("1. 良溶剂泵入反应瓶")
-        print("2. 启动搅拌器")
-        print("3. 良溶剂从反应瓶泵入沉降瓶")
-        print("4. 搅拌300秒")
-        print("5. 停止搅拌器")
-        print("6. 泵出清洁液300秒")
-        return
-    
-    #先将自动化程序中的各个参数固定下来
-    looptimes=3
-    Clean_solution_volume=50
-    clean_solution_speed=3.0
-    stirrer_speed=500
-    stir_time=300
-    pour_time=300#泵出时间，单位秒
-    #清洁过程
-    for i in range(looptimes):
-        Clean_Step_A(deviceManager,Clean_solution_volume,clean_solution_speed,module_number)
-        print("清洁过程：良溶剂已泵入反应瓶，第",i+1,"轮")
-        time.sleep(1)
-        Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
-        print("清洁过程：搅拌器已启动，第",i+1,"轮")
-        time.sleep(1)
-        Clean_Step_B(deviceManager,Clean_solution_volume,clean_solution_speed,module_number)
-        print("清洁过程：良溶剂已从反应瓶泵入沉降瓶，第",i+1,"轮")
-        time.sleep(1)
-        # 等待搅拌时间，每秒打印已等待的时间
-        for elapsed_time in range(1, stir_time + 1):
+    _record_post_process_log("clean", module_number, "Auto_CleanProgram", "start")
+    try:
+        # 仿真模式下按完整业务流程执行，但不访问硬件搅拌电机/阀门
+        if deviceManager.simulation_mode:
+            print(f"仿真模式：执行自动清洁程序 - 模块: {module_number}")
+            print("仿真模式：将执行完整清洁轮次（转移、搅拌、泵出）")
+            looptimes=3
+            Clean_solution_volume=50
+            clean_solution_speed=3.0
+            stirrer_speed=500
+            stir_time=300
+            pour_time=300
+            for i in range(looptimes):
+                cycle = i + 1
+                _record_post_process_log("clean", module_number, "clean_cycle", "start", cycle=cycle, mode="simulation")
+                Clean_Step_A(deviceManager,Clean_solution_volume,clean_solution_speed,module_number,flow="clean")
+                _record_post_process_log("clean", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="clean", mode="simulation")
+                Clean_Step_B(deviceManager,Clean_solution_volume,clean_solution_speed,module_number,flow="clean")
+                _simulate_wait_seconds(f"清洁流程搅拌第{cycle}轮", stir_time)
+                _record_post_process_log("clean", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="clean", mode="simulation")
+                _simulate_wait_seconds(f"清洁流程泵出第{cycle}轮", pour_time)
+                _record_post_process_log("clean", module_number, "clean_cycle", "done", cycle=cycle, mode="simulation")
+            _record_post_process_log("clean", module_number, "Auto_CleanProgram", "done", mode="simulation")
+            return
+        
+        #先将自动化程序中的各个参数固定下来
+        looptimes=3
+        Clean_solution_volume=50
+        clean_solution_speed=3.0
+        stirrer_speed=500
+        stir_time=300
+        pour_time=300#泵出时间，单位秒
+        #清洁过程
+        for i in range(looptimes):
+            cycle = i + 1
+            _record_post_process_log("clean", module_number, "clean_cycle", "start", cycle=cycle)
+            Clean_Step_A(deviceManager,Clean_solution_volume,clean_solution_speed,module_number,flow="clean")
+            print("清洁过程：良溶剂已泵入反应瓶，第",cycle,"轮")
             time.sleep(1)
-            print(f"清洁过程：正在搅拌，已等待 {elapsed_time} /{stir_time}秒，第 {i+1} 轮")
-        time.sleep(1)
-        Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
-        print("清洁过程：搅拌器已停止，第",i+1,"轮")
-        time.sleep(1)
-        #泵出废液
-        Valve_open(deviceManager.gas_valves[module_number])
-        Valve_open(deviceManager.discharge_valves[module_number])
-        print("清洁过程：泵出清洁液，第",i+1,"轮")
-        # 等待泵出时间，每秒打印已等待的时间
-        for elapsed_time in range(1, pour_time + 1):
+            _record_post_process_log("clean", module_number, "stirrer", "start", cycle=cycle, speed=stirrer_speed, phase="clean")
+            Motor_485_idm42_start_stirrer(deviceManager.motors485[module_number],stirrer_speed)
+            print("清洁过程：搅拌器已启动，第",cycle,"轮")
             time.sleep(1)
-            print(f"清洁过程：正在泵出清洁液，已等待 {elapsed_time} /{pour_time}秒，第 {i+1} 轮")
-        Valve_close(deviceManager.gas_valves[module_number])
-        Valve_close(deviceManager.discharge_valves[module_number])
-        print("清洁过程：泵出完成，第",i+1,"轮")
-        time.sleep(1)
+            Clean_Step_B(deviceManager,Clean_solution_volume,clean_solution_speed,module_number,flow="clean")
+            print("清洁过程：良溶剂已从反应瓶泵入沉降瓶，第",cycle,"轮")
+            time.sleep(1)
+            # 等待搅拌时间，每秒打印已等待的时间
+            for elapsed_time in range(1, stir_time + 1):
+                time.sleep(1)
+                print(f"清洁过程：正在搅拌，已等待 {elapsed_time} /{stir_time}秒，第 {cycle} 轮")
+            time.sleep(1)
+            Motor_485_idm42_stop_stirrer(deviceManager.motors485[module_number])
+            _record_post_process_log("clean", module_number, "stirrer", "done", cycle=cycle, speed=stirrer_speed, phase="clean")
+            print("清洁过程：搅拌器已停止，第",cycle,"轮")
+            time.sleep(1)
+            #泵出废液
+            Valve_open(deviceManager.gas_valves[module_number])
+            Valve_open(deviceManager.discharge_valves[module_number])
+            print("清洁过程：泵出清洁液，第",cycle,"轮")
+            # 等待泵出时间，每秒打印已等待的时间
+            for elapsed_time in range(1, pour_time + 1):
+                time.sleep(1)
+                print(f"清洁过程：正在泵出清洁液，已等待 {elapsed_time} /{pour_time}秒，第 {cycle} 轮")
+            Valve_close(deviceManager.gas_valves[module_number])
+            Valve_close(deviceManager.discharge_valves[module_number])
+            print("清洁过程：泵出完成，第",cycle,"轮")
+            _record_post_process_log("clean", module_number, "clean_cycle", "done", cycle=cycle)
+            time.sleep(1)
+        _record_post_process_log("clean", module_number, "Auto_CleanProgram", "done")
+    except Exception as e:
+        _record_post_process_log("clean", module_number, "Auto_CleanProgram", "error", error=str(e))
+        raise
 
 def Auto_CleanProgram_with_uichange(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,module_number:int):
     uifeedback.auto_clean_program_signal.emit(module_number)

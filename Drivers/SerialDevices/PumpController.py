@@ -189,9 +189,28 @@ class FixPump:
 
         volume_bytes = volume_value.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x14]) + volume_bytes
-        recv = self.serial_port.sendcmd(
-            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
-        )
+        max_cmd_retries = 3
+        cmd_ok = False
+        for attempt in range(1, max_cmd_retries + 1):
+            recv = self.serial_port.sendcmd(
+                data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+            )
+            # 功能码06正常应答会回显请求前6字节（地址/功能码/寄存器/数据）
+            if len(recv) == 8 and recv[:6] == data:
+                cmd_ok = True
+                break
+
+            recv_hex = recv.hex(" ").upper() if recv else "EMPTY"
+            expect_hex = data.hex(" ").upper()
+            print(
+                f"加液命令应答校验失败（第{attempt}次）：收到[{recv_hex}]，期望前6字节[{expect_hex}]"
+            )
+            print("执行定量泵复位，等待3秒后重发加液命令...")
+            self.reset()
+            time.sleep(3)
+
+        if not cmd_ok:
+            raise RuntimeError("定量泵加液命令多次重发后应答仍不一致")
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
@@ -211,9 +230,28 @@ class FixPump:
 
         volume_bytes = rotations.to_bytes(2, byteorder='big', signed=False)
         data = bytes([self.address, 0x06, 0x00, 0x14]) + volume_bytes
-        recv = self.serial_port.sendcmd(
-            data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
-        )
+        max_cmd_retries = 3
+        cmd_ok = False
+        for attempt in range(1, max_cmd_retries + 1):
+            recv = self.serial_port.sendcmd(
+                data, 8, validator=self._modbus_validator(0x06), retries=2, retry_delay_s=0.1
+            )
+            # 功能码06正常应答会回显请求前6字节（地址/功能码/寄存器/数据）
+            if len(recv) == 8 and recv[:6] == data:
+                cmd_ok = True
+                break
+
+            recv_hex = recv.hex(" ").upper() if recv else "EMPTY"
+            expect_hex = data.hex(" ").upper()
+            print(
+                f"设定圈数命令应答校验失败（第{attempt}次）：收到[{recv_hex}]，期望前6字节[{expect_hex}]"
+            )
+            print("执行定量泵复位，等待3秒后重发设定圈数命令...")
+            self.reset()
+            time.sleep(3)
+
+        if not cmd_ok:
+            raise RuntimeError("定量泵设定圈数命令多次重发后应答仍不一致")
         # packet = self.serial_port.crc16(data)
         # self.serial_port.ser.reset_input_buffer()
         # self.serial_port.ser.reset_output_buffer()
