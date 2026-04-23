@@ -32,6 +32,7 @@ from Common.ActionLogger import get_action_logger
 # 关键：TXT中的命令名必须和字典的key完全一致
 command_to_func = {
     "REACTOR_SOLUTION_ADD": Add_Solution_to_Reactor,
+    "REACTOR_SOLUTION_ADD_MUTI": Add_Solution_to_Reactor_Array,
     "POST_PROCESS_SOLUTION_ADD": Solution_transfer_Post,
     "POST_PROCESS_CLEAN": Auto_CleanProgram,
     "REACTOR_N2_ON": Reactor_N2_on,
@@ -211,6 +212,29 @@ def process_parameters_by_function(sequence, device_manager):
                 except ValueError:
                     # 转换失败则保持原字符串
                     pass
+
+        # REACTOR_SOLUTION_ADD_MUTI:
+        # 文本参数格式：solution_number, volume_1, reactor_1, volume_2, reactor_2, ...
+        # 函数参数格式：device_manager, solution_number, [volumes], [reactors]
+        if func_name == "Add_Solution_to_Reactor_Array":
+            if len(processed_args) < 3:
+                print(f"⚠️  参数数量不足，跳过：{func_name} -> {processed_args}")
+                continue
+            if (len(processed_args) - 1) % 2 != 0:
+                print(f"⚠️  参数格式错误（应为 solution + n组[volume, reactor]），跳过：{processed_args}")
+                continue
+
+            solution_number = processed_args[0]
+            volumes = []
+            reactors = []
+
+            for i in range(1, len(processed_args), 2):
+                volumes.append(processed_args[i])
+                reactors.append(processed_args[i + 1])
+
+            processed_args = [device_manager, solution_number, volumes, reactors]
+            processed_sequence.append((func, processed_args))
+            continue
 
         # 除了Wait函数外，其他函数都将device_manager添加到第一个参数位置
         if func_name.upper() != "WAIT":

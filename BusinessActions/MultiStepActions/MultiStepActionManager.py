@@ -768,6 +768,86 @@ def Add_Solution_to_Reactor(deviceManager:DeviceManager,solution_number:int,volu
     time.sleep(1)
     Axis_Move(deviceManager,AxisPosition.HOME)
 
+def Add_Solution_to_Reactor_Array(deviceManager:DeviceManager,solution_number:int,volumes,reactors):
+    """
+    前处理模块加液动作（数组版）
+    :param deviceManager: 设备管理器实例
+    :param solution_number: 溶液编号
+    :param volumes: 转移体积数组，单位毫升
+    :param reactors: 目标反应瓶编号数组
+    """
+    if not isinstance(volumes, (list, tuple)) or not isinstance(reactors, (list, tuple)):
+        print("volumes 和 reactors 必须为数组")
+        return
+
+    if len(volumes) != len(reactors):
+        print("volumes 与 reactors 长度不一致")
+        return
+
+    if len(volumes) == 0:
+        print("volumes 与 reactors 不能为空")
+        return
+
+    # 检查是否在仿真模式下
+    if deviceManager.simulation_mode:
+        print(
+            f"仿真模式：执行数组版前处理模块加液动作 - 溶液编号: {solution_number}, "
+            f"体积数组: {list(volumes)}, 反应瓶数组: {list(reactors)}"
+        )
+        return
+
+    adder_map = {
+        1: AxisPosition.Adder_1,
+        2: AxisPosition.Adder_2,
+        3: AxisPosition.Adder_3,
+        4: AxisPosition.Adder_4,
+        5: AxisPosition.Adder_5
+    }
+    reactor_map = {
+        1: AxisPosition.Reactor_1,
+        2: AxisPosition.Reactor_2,
+        3: AxisPosition.Reactor_3,
+        4: AxisPosition.Reactor_4,
+        5: AxisPosition.Reactor_5,
+        6: AxisPosition.Reactor_6,
+        7: AxisPosition.Reactor_7,
+        8: AxisPosition.Reactor_8
+    }
+
+    adder_position = adder_map.get(solution_number)
+    if adder_position is None:
+        print("溶液编号错误")
+        return
+
+    head_picked = False
+    try:
+        # 抓取加液头（只执行一次）
+        Axis_Move(deviceManager, adder_position)
+        time.sleep(1)
+        Gripper_on(deviceManager)
+        head_picked = True
+        time.sleep(1)
+
+        # 按数组顺序依次确认反应瓶并执行加液
+        for index, (volume, reactor) in enumerate(zip(volumes, reactors), start=1):
+            reactor_position = reactor_map.get(reactor)
+            if reactor_position is None:
+                print(f"第{index}组反应瓶编号错误: {reactor}")
+                continue
+
+            Axis_Move(deviceManager, reactor_position)
+            time.sleep(1)
+            FixPump_Inject(deviceManager, solution_number, volume)
+            time.sleep(1)
+    finally:
+        # 遍历结束后将加液头放回
+        if head_picked:
+            Axis_Move(deviceManager, adder_position)
+            time.sleep(1)
+            Gripper_off(deviceManager)
+            time.sleep(1)
+        Axis_Move(deviceManager, AxisPosition.HOME)
+
 def Add_Solution_to_Reactor_with_uichange(deviceManager:DeviceManager,uifeedback:UIFeedbackHandler,solution_number:int,volume:float,reactor:int):
     """
     前处理模块加液动作
